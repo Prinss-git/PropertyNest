@@ -530,8 +530,8 @@ a.stat:hover { border-color: var(--brand); }
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .btn.danger { color: #b42318; }
 .btn.danger:hover { border-color: #b42318; color: #b42318; }
-.lead { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; background: #fff; display: grid; gap: 8px; }
-.lead.is-new { border-left: 4px solid var(--accent); }
+.lead-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; background: #fff; display: grid; gap: 8px; }
+.lead-card.is-new { border-left: 4px solid var(--accent); }
 .lead-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
 .lead-msg { margin: 0; white-space: pre-line; }
 .lead-contact { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--brand); }

@@ -42,7 +42,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         ) : (
           <div className="leads">
             {leads.map((q) => (
-              <article key={q.id} className={`lead ${q.status === "NEW" ? "is-new" : ""}`}>
+              <article key={q.id} className={`lead-card ${q.status === "NEW" ? "is-new" : ""}`}>
                 <div className="lead-head">
                   <div>
                     <strong>{q.name}</strong>
