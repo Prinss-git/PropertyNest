@@ -5,17 +5,21 @@ import type { ListingCard } from "@/lib/listings";
 import { listingsHref, type QueryLike } from "@/lib/searchUrl";
 import { Icon } from "../Icon";
 import { ListingGrid } from "../ListingCard";
+import { ResultsMap } from "../map/ResultsMap";
+
+type View = "grid" | "list" | "map";
 
 /** Sort dropdown, grid/list toggle (remembered per browser) and the result cards. */
 export function ResultsView({ query, items, total }: { query: QueryLike; items: ListingCard[]; total: number }) {
   const router = useRouter();
-  const [view, setView] = useState<"grid" | "list">("grid");
+  const [view, setView] = useState<View>("grid");
   useEffect(() => {
     try {
-      if (localStorage.getItem("pn_view") === "list") setView("list");
+      const saved = localStorage.getItem("pn_view");
+      if (saved === "list" || saved === "map") setView(saved);
     } catch { /* storage blocked */ }
   }, []);
-  const choose = (v: "grid" | "list") => {
+  const choose = (v: View) => {
     setView(v);
     try { localStorage.setItem("pn_view", v); } catch { /* storage blocked */ }
   };
@@ -36,9 +40,11 @@ export function ResultsView({ query, items, total }: { query: QueryLike; items: 
           <div className="view-toggle">
             <button type="button" className={view === "grid" ? "active" : ""} aria-label="Grid view" onClick={() => choose("grid")}><Icon name="grid" /></button>
             <button type="button" className={view === "list" ? "active" : ""} aria-label="List view" onClick={() => choose("list")}><Icon name="list" /></button>
+            <button type="button" className={view === "map" ? "active" : ""} aria-label="Map view" onClick={() => choose("map")}><Icon name="map" /></button>
           </div>
         </div>
       </div>
+      {view === "map" && <ResultsMap items={items} />}
       <ListingGrid items={items} list={view === "list"} />
     </>
   );

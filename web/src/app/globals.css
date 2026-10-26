@@ -600,3 +600,55 @@ a.stat:hover { border-color: var(--brand); }
 .legal h2 { font-size: 19px; margin: 26px 0 6px; }
 .legal p { color: var(--muted); margin: 0; }
 .account-page > .pill-tabs { justify-self: start; }
+
+/* ── Maps ── */
+.pn-pin { background: none; border: 0; }
+.pn-pin-body { display: flex; align-items: center; justify-content: center; background: var(--pin); border: 2px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.pn-pin-body svg { transform: rotate(45deg); }
+.pn-price { background: none; border: 0; }
+.pn-price-body { display: inline-block; transform: translate(-50%, -100%); background: #fff; color: var(--text); font-weight: 700; font-size: 12px; padding: 4px 8px; border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,.25); white-space: nowrap; border: 1px solid var(--line); }
+.pn-price-body:hover, .pn-price-body.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.pn-pop-meta { color: var(--muted); font-size: 12px; }
+.pn-pop-card { display: grid; gap: 4px; color: var(--text) !important; text-decoration: none; }
+.pn-pop-card img { width: 100%; height: 110px; object-fit: cover; border-radius: 6px; }
+.pn-pop-card strong { font-size: 15px; }
+.leaflet-container { font-family: inherit; }
+
+/* What's nearby */
+.nearby { display: grid; gap: 14px; }
+.nearby-address { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-weight: 700; font-size: 16px; }
+.nearby-address svg { flex-shrink: 0; margin-top: 2px; }
+.nearby-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.nearby-chips button { border: 1px solid #c9d1d2; background: #fff; border-radius: 999px; padding: 6px 16px; font-size: 14px; font-weight: 500; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.nearby-chips button:hover { border-color: var(--brand); }
+.nearby-chips button.on { border-color: #3b6fd8; color: #3b6fd8; background: #f2f6fe; }
+.nearby-chips .n { font-size: 11px; background: var(--bg-soft); color: var(--muted); border-radius: 999px; padding: 0 6px; }
+.nearby-frame { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+.nearby-map { height: 420px; width: 100%; background: #e8eef0; }
+.nearby-panel { position: absolute; top: 12px; left: 12px; z-index: 500; width: min(300px, calc(100% - 70px)); background: #fff; border-radius: 10px; box-shadow: var(--shadow-lg); padding: 6px; }
+.nearby-panel ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.nearby-panel li + li { border-top: 1px solid var(--line); }
+.nearby-panel li button { width: 100%; display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto; column-gap: 10px; row-gap: 4px; text-align: left; border: 0; background: none; padding: 10px; cursor: pointer; border-radius: 8px; }
+.nearby-panel li button:hover { background: var(--bg-soft); }
+.nearby-ico { grid-row: span 2; width: 34px; height: 34px; border-radius: 50%; background: var(--bg-soft); display: flex; align-items: center; justify-content: center; }
+.nearby-name { font-weight: 600; font-size: 14px; line-height: 1.3; }
+.nearby-walk { justify-self: start; display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: #3b6fd8; background: #eef3fd; border-radius: 6px; padding: 2px 8px; }
+.nearby-note { margin: 0; padding: 12px; font-size: 14px; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+.nearby-foot { margin: 0; font-size: 13px; }
+.nearby-foot a { color: var(--brand); font-weight: 600; }
+.spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--brand); border-radius: 50%; animation: spin .8s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+@media (max-width: 700px) {
+  .nearby-map { height: 320px; }
+  .nearby-panel { position: static; width: auto; box-shadow: none; border-top: 1px solid var(--line); border-radius: 0; }
+}
+
+/* Location picker (post form) */
+.picker { display: grid; gap: 8px; }
+.picker-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.picker-map { height: 340px; border-radius: 10px; border: 1px solid var(--line); cursor: crosshair; }
+
+/* Search results map */
+.results-map { height: 460px; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 20px; }
+@media (max-width: 700px) { .results-map { height: 360px; } }

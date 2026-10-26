@@ -4,8 +4,11 @@ import { Prisma, type ListingMode, type PropertyType } from "@prisma/client";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { HttpError, type CurrentUser } from "./auth";
 import { db } from "./db";
+import { distanceM, publicPoint } from "./geo";
+import { ensureNearbyCell } from "./jobs";
 import type { ListingInput } from "./listingInput";
 import { autoCheck, EXPIRY_DAYS, statusForFlags, type Flag } from "./moderation";
+import { cellKey } from "./nearby";
 
 /** Listings that count toward a poster's limit. Plans with higher limits arrive with payments (Phase 2). */
 const LIMITS: Partial<Record<CurrentUser["role"], number>> = { OWNER: 3, SEEKER: 3, AGENT: 30, AGENCY_ADMIN: 200 };
@@ -80,6 +83,10 @@ export async function saveListing(user: CurrentUser, input: ListingInput, existi
   });
   // A rejected listing always goes back to a moderator after changes.
   if (existing?.status === "REJECTED") flags.push({ code: "resubmitted", message: "Resubmitted after being rejected." });
+  // A pin far from the chosen city is usually a mistake (or a listing in the wrong city).
+  if (city.lat != null && city.lng != null && distanceM(city.lat, city.lng, input.lat, input.lng) > 30_000) {
+    flags.push({ code: "pin_far_from_city", message: "The map pin is more than 30 km from the chosen city." });
+  }
   // An edit that trips a check goes back to review; a clean edit keeps a live listing live.
   const status = statusForFlags(flags);
   const now = new Date();
@@ -102,8 +109,9 @@ export async function saveListing(user: CurrentUser, input: ListingInput, existi
     cityId: city.id,
     areaId,
     address: input.address || null,
-    lat: city.lat,
-    lng: city.lng,
+    lat: input.lat,
+    lng: input.lng,
+    hideAddress: !input.showExactLocation,
     status,
     moderationFlags: flags as unknown as Prisma.InputJsonValue,
     rejectionReason: null,
@@ -157,6 +165,9 @@ export async function saveListing(user: CurrentUser, input: ListingInput, existi
   });
 
   revalidateListing(ref);
+  // Start looking up nearby schools, hospitals, etc. now, so the map is ready when people visit.
+  const point = publicPoint({ lat: input.lat, lng: input.lng, hideAddress: !input.showExactLocation, refCode: ref });
+  if (point) await ensureNearbyCell(cellKey(point.lat, point.lng)).catch(() => {});
   return { ref, status, flags };
 }
 
@@ -212,6 +223,9 @@ export async function getListingForEdit(user: CurrentUser, ref: string) {
       furnishing: l.furnishing,
       amenities: l.amenities.map((a) => a.amenity.name),
       terms: l.terms as Record<string, unknown>,
+      lat: l.lat,
+      lng: l.lng,
+      showExactLocation: !l.hideAddress,
     },
     photos: l.photos.map((p) => ({ id: p.id, url: p.storageKey })),
   };

@@ -43,6 +43,9 @@ export default async function EditListingPage({ params }: { params: Promise<{ re
     furnishing: v.furnishing,
     amenities: v.amenities,
     terms: v.terms as FormValues["terms"],
+    lat: v.lat,
+    lng: v.lng,
+    showExactLocation: v.showExactLocation,
   };
 
   return (

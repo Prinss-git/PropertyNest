@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import { FURNISHING, MODES, MODE_TYPES, RESIDENTIAL_TYPES, TYPES, amenityPool, type FurnishingKey, type Mode, type PropType } from "@/lib/catalog";
 import { DEFAULT_TERMS, type FormTerms, type FormValues } from "@/lib/listingDefaults";
 import { FINANCING, TITLE_STATUSES } from "@/lib/listingInput";
+import { LocationPicker } from "../map/LocationPicker";
 import { PhotoUploader, type Photo } from "./PhotoUploader";
 
-export type City = { id: string; name: string; province: string; areas: string[] };
+export type City = { id: string; name: string; province: string; lat: number | null; lng: number | null; areas: string[] };
 
 const MODE_PICK: Record<Mode, [string, string]> = {
   buy: ["Sell", "Listed under Buy, with a total selling price"],
@@ -113,8 +114,19 @@ export function ListingForm({ cities, initial, initialPhotos = [], editRef }: { 
             <input className="input" id="p-area" list="area-list" value={v.areaName} onChange={(e) => set("areaName", e.target.value)} placeholder="e.g. Salcedo Village" />
             <datalist id="area-list">{city?.areas.map((a) => <option key={a} value={a} />)}</datalist>{err("areaName")}</div>
 
-          <div className="field span3" data-field="address"><label htmlFor="p-address">Street address (optional, shown only after an inquiry)</label>
+          <div className="field span3" data-field="address"><label htmlFor="p-address">Street address (optional{v.showExactLocation ? "" : ", shown only after an inquiry"})</label>
             <input className="input" id="p-address" value={v.address} maxLength={200} onChange={(e) => set("address", e.target.value)} /></div>
+          <div className="field span3" data-field="lat">
+            <span className="flabel">Location on the map</span>
+            <LocationPicker
+              value={v.lat != null && v.lng != null ? { lat: v.lat, lng: v.lng } : null}
+              onChange={(p) => setV((prev) => ({ ...prev, lat: p?.lat ?? null, lng: p?.lng ?? null }))}
+              cityCenter={city?.lat != null && city?.lng != null ? { lat: city.lat, lng: city.lng } : null}
+              exact={v.showExactLocation}
+              onExact={(x) => set("showExactLocation", x)}
+            />
+            {err("lat")}
+          </div>
 
           <div className="field" data-field="price"><label htmlFor="p-price">{v.mode === "buy" ? "Selling price (₱)" : v.mode === "rent" ? "Monthly rent (₱)" : "Monthly lease rate (₱)"}</label>
             <input className="input" id="p-price" type="number" min={1} inputMode="numeric" value={v.price} onChange={(e) => set("price", e.target.value)} />{err("price")}</div>

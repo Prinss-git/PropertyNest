@@ -679,3 +679,26 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([actorId, createdAt])
 }
+
+// ───────────────────── Nearby places (map) ─────────────────────
+
+enum NearbyStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+/// Points of interest (schools, hospitals, malls, stations, parks...) cached per ~1 km grid cell,
+/// so every listing in the same neighbourhood shares one lookup. Filled by the worker ("nearby.fetch").
+model NearbyCell {
+  /// Cell id: latitude and longitude rounded to 2 decimals, e.g. "14.55,121.05".
+  key       String       @id
+  status    NearbyStatus @default(PENDING)
+  /// [{ name, cat, type, lat, lng }]
+  places    Json         @default("[]")
+  provider  String?
+  error     String?
+  fetchedAt DateTime?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}

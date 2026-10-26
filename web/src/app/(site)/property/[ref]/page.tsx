@@ -4,8 +4,10 @@ import { notFound } from "next/navigation";
 import { FavButton } from "@/components/FavButton";
 import { Icon } from "@/components/Icon";
 import { ListingGrid } from "@/components/ListingCard";
+import { NearbyMap } from "@/components/map/NearbyMap";
 import { Gallery, InquiryForm, PhoneReveal, ReportListing, ShareButton } from "@/components/property/PropertyClient";
 import { FURNISHING, MODES, RESIDENTIAL_TYPES, TYPES, peso, timeAgo, type Mode, type PropType } from "@/lib/catalog";
+import { publicPoint } from "@/lib/geo";
 import { getListing, getSimilar, type ListingDetail } from "@/lib/listings";
 
 // Cached per listing for a minute. Edits will also revalidate the page directly (Phase 1).
@@ -123,7 +125,8 @@ export default async function PropertyPage({ params }: Props) {
     if (l.floorArea) details.push(["Rate per sqm", `${peso(price / l.floorArea)} / month`]);
   }
 
-  const mapUrl = l.lat && l.lng ? `https://www.openstreetmap.org/?mlat=${l.lat.toFixed(5)}&mlon=${l.lng.toFixed(5)}#map=15/${l.lat.toFixed(5)}/${l.lng.toFixed(5)}` : null;
+  // Exact coordinates only if the poster opted in; otherwise an offset point for the approximate circle.
+  const point = publicPoint(l);
 
   // schema.org data so search engines can show price and location in results.
   const jsonLd = {
@@ -198,14 +201,14 @@ export default async function PropertyPage({ params }: Props) {
             </table>
           </div>
 
-          {mapUrl && (
-            <div className="panel">
-              <h2>Location</h2>
-              <p className="muted" style={{ marginTop: -6 }}>{placeLine}. The map shows the approximate area, not the exact address.</p>
-              <a className="map-link" href={mapUrl} target="_blank" rel="noopener noreferrer">
-                <span className="map-pin"><Icon name="pin" size={28} /></span>
-                <span><strong>{l.area?.name ? `${l.area.name}, ` : ""}{l.city.name}</strong><br /><span className="muted">Open in OpenStreetMap ↗</span></span>
-              </a>
+          {point && (
+            <div className="panel" id="nearby">
+              <h2>What&apos;s nearby</h2>
+              <NearbyMap
+                refCode={l.refCode}
+                point={point}
+                address={point.exact && l.address ? `${l.address}, ${placeLine}` : placeLine}
+              />
             </div>
           )}
         </div>

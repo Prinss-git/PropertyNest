@@ -3,6 +3,7 @@ import { Prisma, type ListingMode, type PropertyType } from "@prisma/client";
 import { z } from "zod";
 import { db } from "./db";
 import { FURNISHING, MODE_KEYS, TYPE_KEYS, type FurnishingKey, type Mode, type PropType } from "./catalog";
+import { publicPoint } from "./geo";
 import { smallVariant } from "./storage";
 
 export const PER_PAGE = 12;
@@ -45,7 +46,7 @@ export function parseSearch(params: Record<string, string | string[] | undefined
 const cardSelect = {
   refCode: true, mode: true, type: true, title: true, description: true, price: true,
   bedrooms: true, bathrooms: true, floorArea: true, lotArea: true, terms: true,
-  featuredUntil: true, verifiedAt: true, publishedAt: true,
+  featuredUntil: true, verifiedAt: true, publishedAt: true, lat: true, lng: true, hideAddress: true,
   city: { select: { name: true } },
   area: { select: { name: true } },
   photos: { select: { storageKey: true }, orderBy: { position: "asc" } },
@@ -72,6 +73,8 @@ export type ListingCard = {
   verified: boolean;
   publishedAt: string | null;
   terms: Record<string, unknown>;
+  /** Map position: exact only if the poster chose to show it. */
+  point: { lat: number; lng: number; exact: boolean } | null;
 };
 
 function toCard(r: CardRow): ListingCard {
@@ -94,6 +97,7 @@ function toCard(r: CardRow): ListingCard {
     verified: !!r.verifiedAt,
     publishedAt: r.publishedAt?.toISOString() ?? null,
     terms: (r.terms ?? {}) as Record<string, unknown>,
+    point: publicPoint(r),
   };
 }
 
@@ -241,8 +245,8 @@ export async function getSimilar(l: ListingDetail) {
 export async function getCityOptions() {
   const cities = await db.location.findMany({
     where: { level: "CITY" },
-    select: { id: true, name: true, parent: { select: { name: true } }, children: { select: { name: true }, orderBy: { name: "asc" } } },
+    select: { id: true, name: true, lat: true, lng: true, parent: { select: { name: true } }, children: { select: { name: true }, orderBy: { name: "asc" } } },
     orderBy: { name: "asc" },
   });
-  return cities.map((c) => ({ id: c.id, name: c.name, province: c.parent?.name ?? "", areas: c.children.map((a) => a.name) }));
+  return cities.map((c) => ({ id: c.id, name: c.name, province: c.parent?.name ?? "", lat: c.lat, lng: c.lng, areas: c.children.map((a) => a.name) }));
 }

@@ -7,6 +7,7 @@ export type FormValues = {
   cityId: string; areaName: string; address: string;
   bedrooms: string; bathrooms: string; floorArea: string; lotArea: string; parking: string;
   furnishing: FurnishingKey; amenities: string[]; terms: FormTerms;
+  lat: number | null; lng: number | null; showExactLocation: boolean;
 };
 
 export const DEFAULT_TERMS: Record<Mode, FormTerms> = {
@@ -19,5 +20,6 @@ export function emptyValues(cityId: string): FormValues {
   return {
     mode: "buy", type: "condo", title: "", description: "", price: "", cityId, areaName: "", address: "",
     bedrooms: "1", bathrooms: "1", floorArea: "", lotArea: "", parking: "0", furnishing: "UNFURNISHED", amenities: [], terms: DEFAULT_TERMS.buy,
+    lat: null, lng: null, showExactLocation: false,
   };
 }

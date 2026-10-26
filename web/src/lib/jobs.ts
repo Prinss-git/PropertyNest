@@ -3,6 +3,7 @@
 import { Prisma, type Job } from "@prisma/client";
 import { db } from "./db";
 import { sendEmail, sendSms } from "./messaging";
+import { CELL_MAX_AGE_MS, fetchCell } from "./nearby";
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -11,8 +12,11 @@ export type JobPayloads = {
   "email.send": { to: string; subject: string; text: string };
   "inquiry.notify": { inquiryId: string };
   "listing.reviewed": { listingId: string };
+  "nearby.fetch": { key: string };
 };
 export type JobType = keyof JobPayloads;
+/** Job types that run in the worker's slow lane. */
+const SLOW_TYPES: JobType[] = ["nearby.fetch"];
 
 /** Pass the transaction client when enqueueing alongside other writes, so the job only exists if they commit. */
 export async function enqueue<T extends JobType>(type: T, payload: JobPayloads[T], opts: { tx?: Tx; runAt?: Date } = {}) {
@@ -24,6 +28,7 @@ const SITE = () => process.env.SITE_URL ?? "http://localhost:3000";
 const handlers: { [T in JobType]: (p: JobPayloads[T]) => Promise<void> } = {
   "sms.send": ({ to, body }) => sendSms(to, body),
   "email.send": ({ to, subject, text }) => sendEmail(to, subject, text),
+  "nearby.fetch": ({ key }) => fetchCell(key),
 
   // Fans out to separate SMS + email jobs, so a failed email never re-sends the SMS.
   "inquiry.notify": async ({ inquiryId }) => {
@@ -78,13 +83,16 @@ const handlers: { [T in JobType]: (p: JobPayloads[T]) => Promise<void> } = {
  * Claims up to `limit` due jobs and runs them. Safe with many workers: rows are locked with SKIP LOCKED,
  * and jobs stuck RUNNING for 5+ minutes (a crashed worker) are picked up again.
  */
-export async function runDueJobs(limit = 10): Promise<number> {
+export async function runDueJobs(limit = 10, lane: "fast" | "slow" = "fast"): Promise<number> {
+  // Two lanes so slow jobs (map lookups, ~20 s each) never hold up SMS/email alerts.
+  const slow = lane === "slow";
   const jobs = await db.$queryRaw<Job[]>`
     UPDATE "Job" SET status = 'RUNNING', "lockedAt" = now(), attempts = attempts + 1
     WHERE id IN (
       SELECT id FROM "Job"
-      WHERE (status = 'QUEUED' AND "runAt" <= now())
-         OR (status = 'RUNNING' AND "lockedAt" < now() - interval '5 minutes')
+      WHERE ((status = 'QUEUED' AND "runAt" <= now())
+         OR (status = 'RUNNING' AND "lockedAt" < now() - interval '5 minutes'))
+        AND (type = ANY(${SLOW_TYPES}) = ${slow})
       ORDER BY "runAt"
       LIMIT ${limit}
       FOR UPDATE SKIP LOCKED
@@ -114,4 +122,32 @@ export async function runDueJobs(limit = 10): Promise<number> {
     }
   }
   return jobs.length;
+}
+
+/**
+ * Makes sure nearby places for a map cell are cached or on their way, and returns them when ready.
+ * Cheap enough to call per request: it only enqueues when the cell is missing, stale, or failed over an hour ago.
+ */
+export async function ensureNearbyCell(key: string) {
+  const cell = await db.nearbyCell.findUnique({ where: { key } });
+  const stale = cell?.status === "READY" && !!cell.fetchedAt && Date.now() - cell.fetchedAt.getTime() > CELL_MAX_AGE_MS;
+  // FAILED cells retry after an hour; PENDING ones whose job was lost (e.g. queue wiped) after 15 minutes.
+  const retry =
+    (cell?.status === "FAILED" && Date.now() - cell.updatedAt.getTime() > 3600e3) ||
+    (cell?.status === "PENDING" && Date.now() - cell.updatedAt.getTime() > 15 * 60e3);
+  if (!cell || stale || retry) {
+    try {
+      await db.$transaction(async (tx) => {
+        // Stale cells keep serving their old places while the refresh runs.
+        if (cell) await tx.nearbyCell.update({ where: { key }, data: { status: stale ? "READY" : "PENDING" } });
+        else await tx.nearbyCell.create({ data: { key } });
+        await enqueue("nearby.fetch", { key }, { tx });
+      });
+    } catch (e) {
+      // Another request created the cell first; its job will fill it.
+      if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e;
+    }
+  }
+  if (cell?.status === "READY") return { status: "ready" as const, places: cell.places };
+  return { status: cell?.status === "FAILED" && !retry ? ("failed" as const) : ("pending" as const), places: [] };
 }

@@ -66,6 +66,14 @@ scripts/devdb.mjs           start/stop the local dev database
 - **Google**: set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (see `.env.example`). Until then the button explains it isn't set up.
 - Sessions: a random token in an httpOnly cookie; only its SHA-256 is stored. 30 days.
 
+## Maps
+
+- **Property page "What's nearby"**: schools, hospitals, malls, banks, parks, gyms, train and bus stations within 1 km, with walking times, category chips and a closest-places panel.
+- **Privacy**: posters choose "exact location" or an approximate ~400 m circle. When hidden, the exact coordinates never leave the server; pages and APIs get an offset point.
+- **Posting**: click or drag a pin, or use the device location. Pins more than 30 km from the chosen city are flagged for review.
+- **Search**: a Map view next to grid and list shows price pins.
+- **Data**: nearby places come from OpenStreetMap (Nominatim), cached per ~1 km cell in `NearbyCell` and fetched by the worker's slow lane (~20 s per cell, 1 request per second). Map tiles come from OpenStreetMap.
+
 ## Posting and moderation
 
 - Owners get 3 active listings; agents 30 (until paid plans arrive in Phase 2). Seekers who post become owners.
@@ -93,6 +101,7 @@ full search page ≈ 180 req/s, search API ≈ 600 req/s, zero errors.
 - Google sign-in: create the OAuth client and add the production redirect URI.
 - Move photo storage to S3 or R2 (`src/lib/storage.ts`) and serve `/media` from a CDN.
 - Run at least one `npm run worker` process next to the app.
+- Maps: switch tiles to a keyed provider (MapTiler, Stadia or Geoapify) in `src/components/map/mapKit.ts`, and nearby places to Geoapify or a self-hosted Nominatim in `src/lib/nearby.ts`. The free OpenStreetMap services only allow light use.
 - Have a lawyer replace the draft terms, privacy, and cookie pages.
 
 ## Not built yet (next phases)

@@ -30,6 +30,9 @@ const PATHS: Record<string, string> = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
   chevron: '<path d="M6 9l6 6 6-6"/>',
+  walk: '<circle cx="13" cy="4" r="2"/><path d="M7 21l3-7 3 3v4M6 12l3-4 4 1 2 4 3 1M10 14l1-5"/>',
+  target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+  map: '<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',
   logo: '<path d="M4 13l12-9 12 9" stroke-width="3"/><path d="M8 11v14h16V11" stroke-width="3"/><circle cx="16" cy="18" r="3.2" fill="#ff6b4a" stroke="none"/>',
 };
 

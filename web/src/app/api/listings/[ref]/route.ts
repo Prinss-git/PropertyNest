@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { publicPoint } from "@/lib/geo";
 import { getListing } from "@/lib/listings";
 
 // GET /api/listings/PN-10042 — public listing details.
@@ -23,7 +24,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ ref: st
       parking: l.parking,
       furnishing: l.furnishing,
       terms: l.terms,
-      location: { area: l.area?.name ?? null, city: l.city.name, province: l.city.parent?.name ?? null, lat: l.lat, lng: l.lng },
+      // Approximate unless the poster chose to show the exact spot.
+      location: { area: l.area?.name ?? null, city: l.city.name, province: l.city.parent?.name ?? null, point: publicPoint(l) },
       photos: l.photos.map((p) => p.storageKey),
       amenities: l.amenities.map((a) => a.amenity.name),
       agent: l.agent ? { name: l.agent.name, agency: agentProfile?.agency?.name ?? null, verified: !!agentProfile?.licenseVerifiedAt } : null,

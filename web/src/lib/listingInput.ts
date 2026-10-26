@@ -1,5 +1,6 @@
 // Validation for creating / editing a listing. Shared by the form (client) and the API (server).
 import { z } from "zod";
+import { inPhilippinesBox } from "./phBounds";
 import { AMENITY_POOLS, FURNISHING, MODE_TYPES, type FurnishingKey, type Mode, type PropType } from "./catalog";
 
 export const TITLE_STATUSES = ["Clean Title", "Pre-selling", "RFO (Ready for Occupancy)"] as const;
@@ -44,6 +45,9 @@ const base = z.object({
   furnishing: z.enum(Object.keys(FURNISHING) as [FurnishingKey, ...FurnishingKey[]]),
   amenities: z.array(z.string().max(60)).max(30),
   photoIds: z.array(z.string().min(1)).min(3, "Add at least 3 photos.").max(20, "Add up to 20 photos."),
+  lat: z.number({ required_error: "Place the pin on the map.", invalid_type_error: "Place the pin on the map." }),
+  lng: z.number({ required_error: "Place the pin on the map.", invalid_type_error: "Place the pin on the map." }),
+  showExactLocation: z.boolean().default(false),
 });
 
 export const listingInputSchema = z
@@ -58,6 +62,7 @@ export const listingInputSchema = z
     }
     const allowed = new Set<string>([...AMENITY_POOLS.residential, ...AMENITY_POOLS.commercial, ...AMENITY_POOLS.lot]);
     if (d.amenities.some((a) => !allowed.has(a))) ctx.addIssue({ code: "custom", path: ["amenities"], message: "Unknown amenity." });
+    if (!inPhilippinesBox(d.lat, d.lng)) ctx.addIssue({ code: "custom", path: ["lat"], message: "The pin must be in the Philippines." });
     if (d.type === "lot" ? !d.lotArea : !d.floorArea) {
       ctx.addIssue({ code: "custom", path: [d.type === "lot" ? "lotArea" : "floorArea"], message: d.type === "lot" ? "Enter the lot area." : "Enter the floor area." });
     }

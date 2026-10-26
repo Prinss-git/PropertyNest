@@ -15,7 +15,16 @@ import {
   type ListingMode,
   type PropertyType,
 } from "@prisma/client";
+import { createHash } from "node:crypto";
 import { hashPassword } from "../src/lib/password";
+import { db as appDb } from "../src/lib/db";
+import { publicPoint } from "../src/lib/geo";
+import { ensureNearbyCell } from "../src/lib/jobs";
+import { cellKey } from "../src/lib/nearby";
+import { AREA_COORDS } from "./area-coords";
+
+/** Stable pseudo-random number in [0,1) from a string, so re-seeding puts listings in the same spots. */
+const unit = (s: string, salt: string) => createHash("sha256").update(salt + s).digest().readUInt32BE(0) / 2 ** 32;
 
 const prisma = new PrismaClient();
 
@@ -66,6 +75,8 @@ async function main() {
   // Children before parents, so foreign keys never block the wipe.
   await prisma.$transaction([
     prisma.job.deleteMany(),
+    // Nearby places are real OpenStreetMap data and slow to fetch, so finished cells survive a re-seed.
+    prisma.nearbyCell.deleteMany({ where: { status: { not: "READY" } } }),
     prisma.outboundMessage.deleteMany(),
     prisma.otpCode.deleteMany(),
     prisma.authToken.deleteMany(),
@@ -116,7 +127,7 @@ async function main() {
     cityIds.set(loc.city, city.id);
     for (const area of loc.areas) {
       const a = await prisma.location.create({
-        data: { name: area, slug: `${citySlug}/${slugify(area)}`, level: "AREA", parentId: city.id },
+        data: { name: area, slug: `${citySlug}/${slugify(area)}`, level: "AREA", parentId: city.id, lat: AREA_COORDS[`${loc.city}|${area}`]?.[0], lng: AREA_COORDS[`${loc.city}|${area}`]?.[1] },
       });
       areaIds.set(`${loc.city}|${area}`, a.id);
     }
@@ -218,8 +229,11 @@ async function main() {
         terms,
         cityId: cityIds.get(l.city)!,
         areaId: areaIds.get(`${l.city}|${l.area}`),
-        lat: l.lat,
-        lng: l.lng,
+        // Within ~400 m of the neighbourhood centre (falls back to the generator position).
+        lat: (AREA_COORDS[`${l.city}|${l.area}`]?.[0] ?? l.lat) + (unit(l.id, "lat") - 0.5) * 0.007,
+        lng: (AREA_COORDS[`${l.city}|${l.area}`]?.[1] ?? l.lng) + (unit(l.id, "lng") - 0.5) * 0.007,
+        // Businesses usually show their exact spot; most home owners prefer an approximate area.
+        hideAddress: ["office", "commercial", "warehouse", "lot"].includes(l.type) ? false : unit(l.id, "hide") < 0.7,
         posterId: agentId,
         agentId,
         agencyId: agencyIds.get(l.agent.agency),
@@ -234,6 +248,12 @@ async function main() {
     });
   }
 
+  // Queue nearby-place lookups for every neighbourhood, so maps are ready by the time anyone looks.
+  const listings = await prisma.listing.findMany({ select: { refCode: true, lat: true, lng: true, hideAddress: true } });
+  const keys = new Set(listings.map((l) => publicPoint(l)).filter((p) => !!p).map((p) => cellKey(p!.lat, p!.lng)));
+  for (const key of keys) await ensureNearbyCell(key);
+  console.log(`Nearby-place lookups queued or cached for ${keys.size} map cells (the worker fills about one per 20 seconds).`);
+
   const counts = await prisma.listing.groupBy({ by: ["mode"], _count: true });
   console.log("Seeded listings:", Object.fromEntries(counts.map((c) => [c.mode, c._count])));
   console.log(`Locations: ${await prisma.location.count()}, amenities: ${amenityIds.size}, agents: ${agentIds.size}, agencies: ${agencyIds.size}`);
@@ -244,4 +264,4 @@ main()
     console.error(e);
     process.exitCode = 1;
   })
-  .finally(() => prisma.$disconnect());
+  .finally(() => Promise.all([prisma.$disconnect(), appDb.$disconnect()]));
