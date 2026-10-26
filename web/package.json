@@ -15,7 +15,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "worker": "node --env-file-if-exists=.env --import tsx scripts/worker.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
@@ -24,6 +25,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "server-only": "^0.0.1",
+    "sharp": "^0.34.5",
     "zod": "^3.25.67"
   },
   "devDependencies": {

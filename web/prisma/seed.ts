@@ -15,6 +15,7 @@ import {
   type ListingMode,
   type PropertyType,
 } from "@prisma/client";
+import { hashPassword } from "../src/lib/password";
 
 const prisma = new PrismaClient();
 
@@ -56,6 +57,7 @@ const FURNISHING: Record<string, Furnishing> = {
 };
 
 const DAY = 864e5;
+const DEMO_PASSWORD = "Nest-demo-2026";
 
 async function main() {
   const data = loadSampleData();
@@ -63,6 +65,12 @@ async function main() {
 
   // Children before parents, so foreign keys never block the wipe.
   await prisma.$transaction([
+    prisma.job.deleteMany(),
+    prisma.outboundMessage.deleteMany(),
+    prisma.otpCode.deleteMany(),
+    prisma.authToken.deleteMany(),
+    prisma.loginAttempt.deleteMany(),
+    prisma.upload.deleteMany(),
     prisma.listingStatDaily.deleteMany(),
     prisma.report.deleteMany(),
     prisma.featuredBoost.deleteMany(),
@@ -161,12 +169,15 @@ async function main() {
     });
     agentIds.set(ag.name, user.id);
   }
+  // Demo accounts: log in with email + DEMO_PASSWORD, or with the phone number via OTP.
+  const demoHash = await hashPassword(DEMO_PASSWORD);
   await prisma.user.createMany({
     data: [
-      { name: "Demo Owner", email: "owner@example.com", role: "OWNER" },
-      { name: "Demo Seeker", email: "seeker@example.com", role: "SEEKER" },
-      { name: "Moderator", email: "moderator@example.com", role: "MODERATOR" },
-      { name: "Admin", email: "admin@example.com", role: "ADMIN" },
+      // Sign in as these with the matching number (dev shows the SMS code on screen).
+      { name: "Demo Owner", email: "owner@example.com", phone: "+639170000003", role: "OWNER", passwordHash: demoHash, emailVerifiedAt: new Date() },
+      { name: "Demo Seeker", email: "seeker@example.com", phone: "+639170000004", role: "SEEKER", passwordHash: demoHash, emailVerifiedAt: new Date() },
+      { name: "Mia Moderator", email: "moderator@example.com", phone: "+639170000001", role: "MODERATOR", passwordHash: demoHash, emailVerifiedAt: new Date() },
+      { name: "Admin", email: "admin@example.com", phone: "+639170000002", role: "ADMIN", passwordHash: demoHash, emailVerifiedAt: new Date() },
     ],
   });
 

@@ -153,6 +153,8 @@ model User {
   phone           String?    @unique // E.164, e.g. +639171234567
   name            String
   passwordHash    String?
+  /// Google account id ("sub") for Sign in with Google.
+  googleId        String?    @unique
   role            Role       @default(SEEKER)
   status          UserStatus @default(ACTIVE)
   avatarUrl       String?
@@ -176,6 +178,8 @@ model User {
   reportsFiled   Report[]       @relation("ReportFiler")
   reportsHandled Report[]       @relation("ReportHandler")
   auditLogs      AuditLog[]
+  uploads        Upload[]
+  authTokens     AuthToken[]
 }
 
 model AgentProfile {
@@ -222,16 +226,49 @@ model Session {
   @@index([expiresAt])
 }
 
+enum AuthTokenKind {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+/// One-time links sent by email. Only a hash is stored; the raw token lives in the link.
+model AuthToken {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      AuthTokenKind
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  @@index([userId, kind])
+}
+
+/// Password sign-in attempts, for throttling guessing per email and per IP.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ipHash    String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ipHash, createdAt])
+}
+
 model OtpCode {
   id        String    @id @default(cuid())
   phone     String
   codeHash  String
   attempts  Int       @default(0)
+  ipHash    String?
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 
   @@index([phone, createdAt])
+  @@index([ipHash, createdAt])
 }
 
 // ─────────────────────────── Places ───────────────────────────
@@ -313,6 +350,11 @@ model Listing {
   saveCount     Int       @default(0)
   inquiryCount  Int       @default(0)
 
+  /// Automatic check results, e.g. [{"code":"price_low","message":"..."}]. Non-empty sends the listing to review.
+  moderationFlags Json      @default("[]")
+  rejectionReason String?
+  reviewedAt      DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -340,17 +382,89 @@ model Listing {
 }
 
 model ListingPhoto {
-  id         String   @id @default(cuid())
-  listingId  String
-  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  listingId   String
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
   /// Object-storage key (or a full URL for seeded / legacy photos).
-  storageKey String
-  width      Int?
-  height     Int?
-  position   Int      @default(0)
-  createdAt  DateTime @default(now())
+  storageKey  String
+  width       Int?
+  height      Int?
+  /// SHA-256 of the processed image; the same photo on another poster's listing is flagged as a likely copy.
+  contentHash String?
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
 
   @@index([listingId, position])
+  @@index([contentHash])
+}
+
+/// Photos uploaded before a listing is saved. Claimed by the listing on save; unclaimed ones are cleaned up.
+model Upload {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storageKey  String   @unique
+  width       Int
+  height      Int
+  contentHash String
+  bytes       Int
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ───────────────────── Background jobs & messaging ─────────────────────
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+/// Postgres-backed job queue, drained by `npm run worker` with FOR UPDATE SKIP LOCKED,
+/// so several workers can run side by side. Swap for BullMQ/SQS when Redis arrives.
+model Job {
+  id          String    @id @default(cuid())
+  type        String // "sms.send" | "email.send" | "inquiry.notify" | ...
+  payload     Json
+  status      JobStatus @default(QUEUED)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  runAt       DateTime  @default(now())
+  lockedAt    DateTime?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  finishedAt  DateTime?
+
+  @@index([status, runAt])
+}
+
+enum MessageChannel {
+  SMS
+  EMAIL
+}
+
+enum MessageStatus {
+  SENT
+  FAILED
+}
+
+/// Every SMS / email the system sends: delivery log for support, and the dev outbox (/admin/outbox).
+model OutboundMessage {
+  id          String         @id @default(cuid())
+  channel     MessageChannel
+  to          String
+  subject     String?
+  body        String
+  provider    String // "console" | "semaphore" | "resend"
+  providerRef String?
+  status      MessageStatus
+  error       String?
+  createdAt   DateTime       @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([to, createdAt])
 }
 
 model Amenity {

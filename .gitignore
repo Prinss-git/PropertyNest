@@ -1,6 +1,9 @@
 # Local dev database (created by `npm run db:init` in web/)
 .devdb/
 
+# Locally stored photo uploads (production uses S3/R2)
+.uploads/
+
 # Build output and dependencies
 node_modules/
 .next/

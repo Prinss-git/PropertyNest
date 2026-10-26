@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { FavButton } from "@/components/FavButton";
 import { Icon } from "@/components/Icon";
 import { ListingGrid } from "@/components/ListingCard";
-import { Gallery, InquiryForm, PhoneReveal, ShareButton } from "@/components/property/PropertyClient";
+import { Gallery, InquiryForm, PhoneReveal, ReportListing, ShareButton } from "@/components/property/PropertyClient";
 import { FURNISHING, MODES, RESIDENTIAL_TYPES, TYPES, peso, timeAgo, type Mode, type PropType } from "@/lib/catalog";
 import { getListing, getSimilar, type ListingDetail } from "@/lib/listings";
 
@@ -226,6 +226,7 @@ export default async function PropertyPage({ params }: Props) {
             <CostBox l={l} mode={mode} terms={terms} />
             {l.status === "ACTIVE" && <InquiryForm refCode={l.refCode} mode={mode} agentName={agentName} />}
             {agentPhone && <PhoneReveal phone={agentPhone} />}
+            <ReportListing refCode={l.refCode} />
           </div>
         </aside>
       </div>

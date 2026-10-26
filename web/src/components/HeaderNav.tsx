@@ -4,6 +4,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { MODES, MODE_KEYS, MODE_TYPES, TYPES, type Mode } from "@/lib/catalog";
 import { useFavorites } from "./favorites";
+import { useMe } from "./useMe";
 import { Icon } from "./Icon";
 
 const EXTRAS: Record<Mode, { all: string; links: [string, string][] }> = {
@@ -11,6 +12,48 @@ const EXTRAS: Record<Mode, { all: string; links: [string, string][] }> = {
   rent: { all: "All properties for rent", links: [["/listings?mode=rent&furnishing=Fully%20Furnished", "Fully furnished"], ["/listings?mode=rent&pets=1", "Pet friendly"]] },
   lease: { all: "All properties for lease", links: [["/listings?mode=lease&amenities=PEZA%20Accredited", "PEZA-accredited spaces"], ["/listings?mode=lease&term=1", "1-year terms or shorter"]] },
 };
+
+function AccountMenu() {
+  const me = useMe();
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
+
+  // Reserve the space while loading so the header doesn't jump.
+  if (me === undefined) return <span className="account-slot" aria-hidden="true" />;
+  if (!me) {
+    return <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-outline btn-sm">Log in</Link>;
+  }
+  const staff = me.role === "MODERATOR" || me.role === "ADMIN";
+  const poster = me.role !== "SEEKER";
+  const signOut = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/";
+  };
+  return (
+    <div className={`nav-item account-menu ${open ? "open" : ""}`} ref={ref}>
+      <button type="button" className="icon-btn avatar-btn" aria-expanded={open} aria-label="Account menu" onClick={() => setOpen(!open)}>
+        {me.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+      </button>
+      <div className="nav-menu" role="menu">
+        <div className="nav-menu-label">{me.name}</div>
+        <Link href="/account" role="menuitem"><span>My account</span></Link>
+        {poster && <Link href="/account#listings" role="menuitem"><span>My listings</span></Link>}
+        {poster && <Link href="/account/leads" role="menuitem"><span>Inquiries (leads)</span></Link>}
+        <Link href="/saved" role="menuitem"><span>Saved listings</span></Link>
+        {staff && <Link href="/admin" role="menuitem"><span>Moderation</span></Link>}
+        <div className="nav-menu-sep" />
+        <button type="button" className="nav-menu-btn" role="menuitem" onClick={signOut}>Sign out</button>
+      </div>
+    </div>
+  );
+}
 
 export function HeaderNav({ counts }: { counts: Record<string, number> }) {
   const pathname = usePathname();
@@ -86,6 +129,7 @@ export function HeaderNav({ counts }: { counts: Record<string, number> }) {
           <Icon name="heart" />
           {favCount > 0 && <span className="badge">{favCount}</span>}
         </Link>
+        <AccountMenu />
         <Link href="/post" className="btn btn-primary btn-sm">
           <Icon name="plus" size={16} />
           <span className="btn-post-text">List Property</span>

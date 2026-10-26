@@ -3,6 +3,7 @@ import { Prisma, type ListingMode, type PropertyType } from "@prisma/client";
 import { z } from "zod";
 import { db } from "./db";
 import { FURNISHING, MODE_KEYS, TYPE_KEYS, type FurnishingKey, type Mode, type PropType } from "./catalog";
+import { smallVariant } from "./storage";
 
 export const PER_PAGE = 12;
 
@@ -87,7 +88,7 @@ function toCard(r: CardRow): ListingCard {
     lotArea: r.lotArea,
     city: r.city.name,
     area: r.area?.name ?? null,
-    photo: r.photos[0]?.storageKey ?? null,
+    photo: r.photos[0] ? smallVariant(r.photos[0].storageKey) : null,
     photoCount: r.photos.length,
     featured: !!r.featuredUntil && r.featuredUntil > new Date(),
     verified: !!r.verifiedAt,
@@ -234,4 +235,14 @@ export async function getSimilar(l: ListingDetail) {
     take: 4,
   });
   return rows.map(toCard);
+}
+
+/** Cities (with known areas) for the listing form. */
+export async function getCityOptions() {
+  const cities = await db.location.findMany({
+    where: { level: "CITY" },
+    select: { id: true, name: true, parent: { select: { name: true } }, children: { select: { name: true }, orderBy: { name: "asc" } } },
+    orderBy: { name: "asc" },
+  });
+  return cities.map((c) => ({ id: c.id, name: c.name, province: c.parent?.name ?? "", areas: c.children.map((a) => a.name) }));
 }

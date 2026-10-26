@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "../Icon";
 import { toast } from "../toast";
+import { useMe } from "../useMe";
 
 export function Gallery({ photos, title, icon }: { photos: string[]; title: string; icon: string }) {
   const [open, setOpen] = useState<number | null>(null);
@@ -119,6 +120,51 @@ export function InquiryForm({ refCode, mode, agentName }: { refCode: string; mod
       <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
         <Icon name="mail" size={16} /> {busy ? "Sending…" : "Send inquiry"}
       </button>
+    </form>
+  );
+}
+
+const REPORT_REASONS = [
+  ["FAKE_LISTING", "Fake or misleading listing"],
+  ["SCAM", "Asked for money before viewing / scam"],
+  ["ALREADY_SOLD_OR_RENTED", "Already sold, rented or leased"],
+  ["WRONG_PRICE", "Wrong price or details"],
+  ["DUPLICATE", "Duplicate of another listing"],
+  ["OFFENSIVE", "Offensive content"],
+  ["OTHER", "Something else"],
+] as const;
+
+export function ReportListing({ refCode }: { refCode: string }) {
+  const me = useMe();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState<string>("FAKE_LISTING");
+  const [details, setDetails] = useState("");
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+
+  if (done) return <p className="fine">Thanks. A moderator will review this listing.</p>;
+  if (!open) {
+    return <button type="button" className="link-btn report-link" onClick={() => setOpen(true)}>Report this listing</button>;
+  }
+  if (me === null) {
+    return <p className="fine"><a className="link-btn" href={`/login?next=/property/${refCode}`}>Log in</a> to report a listing. It keeps reports trustworthy.</p>;
+  }
+  return (
+    <form className="report-form" onSubmit={async (e) => {
+      e.preventDefault();
+      setError("");
+      const res = await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ listingRef: refCode, reason, details }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return setError(data.error ?? "Couldn't send the report.");
+      setDone(true);
+    }}>
+      <label htmlFor="report-reason" className="flabel">What&apos;s wrong?</label>
+      <select id="report-reason" className="select" value={reason} onChange={(e) => setReason(e.target.value)}>
+        {REPORT_REASONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+      <textarea className="textarea" rows={2} maxLength={1000} placeholder="Details (optional)" value={details} onChange={(e) => setDetails(e.target.value)} aria-label="Details" />
+      {error && <p className="form-error">{error}</p>}
+      <div className="row-actions"><button className="btn btn-sm btn-brand">Send report</button><button type="button" className="btn btn-sm btn-outline" onClick={() => setOpen(false)}>Cancel</button></div>
     </form>
   );
 }

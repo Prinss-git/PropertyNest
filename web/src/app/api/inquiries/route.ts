@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { enqueue } from "@/lib/jobs";
 import { clientIp, hashIp } from "@/lib/request";
 
 const inquirySchema = z.object({
@@ -44,10 +46,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "You've sent several inquiries recently. Please wait a while before sending more." }, { status: 429 });
   }
 
+  const sender = await getCurrentUser();
   const inquiry = await db.$transaction(async (tx) => {
     const created = await tx.inquiry.create({
       data: {
         listingId: listing.id,
+        senderId: sender?.id,
         name: d.name,
         email: d.email,
         phone: d.phone || null,
@@ -59,9 +63,10 @@ export async function POST(req: Request) {
       select: { id: true },
     });
     await tx.listing.update({ where: { id: listing.id }, data: { inquiryCount: { increment: 1 } } });
+    // Agent alerts go through the queue: the visitor gets an instant response even if SMS is slow.
+    await enqueue("inquiry.notify", { inquiryId: created.id }, { tx });
     return created;
   });
 
-  // TODO(Phase 1): enqueue email + SMS notification to the agent instead of doing it inline.
   return NextResponse.json({ ok: true, id: inquiry.id }, { status: 201 });
 }
