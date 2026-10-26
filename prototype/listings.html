@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Search Properties | PropertyNest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="page-head">
+    <div class="container">
+      <div class="breadcrumb"><a href="index.html">Home</a> / <span id="crumb">Properties</span></div>
+      <h1 id="page-title">Properties</h1>
+      <form class="quickbar" id="quickbar" autocomplete="off">
+        <div class="pill-tabs" id="mode-tabs">
+          <button type="button" data-mode="">All</button>
+          <button type="button" data-mode="buy">Buy</button>
+          <button type="button" data-mode="rent">Rent</button>
+          <button type="button" data-mode="lease">Lease</button>
+        </div>
+        <input class="input" id="qb-q" list="loc-list" placeholder="Search city, area, or property type">
+        <datalist id="loc-list"></datalist>
+        <button class="btn btn-brand" type="submit">Search</button>
+      </form>
+    </div>
+  </div>
+
+  <main class="container layout">
+    <aside class="filters" id="filters">
+      <h3>Filters <button type="button" id="clear-filters">Clear all</button></h3>
+      <div class="fgroup">
+        <label for="f-type">Property type</label>
+        <select class="select" id="f-type"></select>
+      </div>
+      <div class="fgroup">
+        <span class="flabel" id="price-label">Price</span>
+        <div class="chips" id="price-chips"></div>
+        <div class="two">
+          <input class="input" id="f-min" type="number" min="0" placeholder="Min ₱">
+          <input class="input" id="f-max" type="number" min="0" placeholder="Max ₱">
+        </div>
+      </div>
+      <div class="fgroup" data-for="residential">
+        <span class="flabel">Bedrooms</span>
+        <div class="chips" data-chip="beds">
+          <button type="button" class="chip" data-v="">Any</button>
+          <button type="button" class="chip" data-v="1">1+</button>
+          <button type="button" class="chip" data-v="2">2+</button>
+          <button type="button" class="chip" data-v="3">3+</button>
+          <button type="button" class="chip" data-v="4">4+</button>
+        </div>
+      </div>
+      <div class="fgroup" data-for="residential">
+        <span class="flabel">Bathrooms</span>
+        <div class="chips" data-chip="baths">
+          <button type="button" class="chip" data-v="">Any</button>
+          <button type="button" class="chip" data-v="1">1+</button>
+          <button type="button" class="chip" data-v="2">2+</button>
+          <button type="button" class="chip" data-v="3">3+</button>
+        </div>
+      </div>
+      <div class="fgroup">
+        <label for="f-area">Min. floor / lot area (sqm)</label>
+        <input class="input" id="f-area" type="number" min="0" placeholder="e.g. 50">
+      </div>
+      <div class="fgroup" data-for="furnishing">
+        <label for="f-furn">Furnishing</label>
+        <select class="select" id="f-furn">
+          <option value="">Any</option>
+          <option>Fully Furnished</option><option>Semi Furnished</option><option>Unfurnished</option>
+          <option>Fitted</option><option>Warm Shell</option><option>Bare Shell</option>
+        </select>
+      </div>
+      <div class="fgroup" data-for="lease">
+        <label for="f-term">Max. minimum lease term</label>
+        <select class="select" id="f-term">
+          <option value="">Any term</option>
+          <option value="1">Up to 1 year</option><option value="2">Up to 2 years</option>
+          <option value="3">Up to 3 years</option><option value="5">Up to 5 years</option>
+        </select>
+      </div>
+      <div class="fgroup">
+        <label class="check"><input type="checkbox" id="f-verified"> Verified listings only</label>
+        <label class="check" data-for="rent"><input type="checkbox" id="f-pets"> Pet friendly</label>
+      </div>
+      <div class="fgroup">
+        <span class="flabel">Amenities</span>
+        <div id="amen-checks" style="display:grid;gap:6px"></div>
+      </div>
+      <button type="button" class="btn btn-brand btn-block filter-toggle" id="close-filters" style="margin-top:12px">Show results</button>
+    </aside>
+
+    <section>
+      <div class="results-bar">
+        <div class="count"><strong id="count">0</strong> <span class="muted" id="count-label">properties found</span></div>
+        <div class="results-tools">
+          <button class="btn btn-outline btn-sm filter-toggle" id="open-filters" type="button"></button>
+          <select class="select" id="sort" style="width:auto">
+            <option value="relevance">Sort: Featured</option>
+            <option value="newest">Newest first</option>
+            <option value="price-asc">Price: low to high</option>
+            <option value="price-desc">Price: high to low</option>
+            <option value="area-desc">Largest area</option>
+          </select>
+          <div class="view-toggle">
+            <button type="button" data-view="grid" class="active" aria-label="Grid view"></button>
+            <button type="button" data-view="list" aria-label="List view"></button>
+          </div>
+        </div>
+      </div>
+      <div class="active-filters" id="active-filters"></div>
+      <div class="listing-grid" id="results"></div>
+      <div class="pagination" id="pagination"></div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/listings.js"></script>
+</body>
+</html>

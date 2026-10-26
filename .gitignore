@@ -1,0 +1,16 @@
+# Local dev database (created by `npm run db:init` in web/)
+.devdb/
+
+# Build output and dependencies
+node_modules/
+.next/
+out/
+
+# Secrets
+.env
+.env.local
+web/.env
+web/.env.local
+
+# Deploy bundles
+deploy/

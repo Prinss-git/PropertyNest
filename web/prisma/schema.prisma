@@ -1,0 +1,567 @@
+// PropertyNest database schema.
+// Source of truth for all data. Search engines, caches and analytics are derived from these tables.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm, unaccent, citext]
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Role {
+  SEEKER // free account: favorites, saved searches, inquiries
+  OWNER // posts their own property (limited free listings)
+  AGENT // PRC-licensed broker / salesperson
+  AGENCY_ADMIN // manages an agency's agents and billing
+  MODERATOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum ListingMode {
+  BUY
+  RENT
+  LEASE
+}
+
+enum PropertyType {
+  CONDO
+  HOUSE
+  APARTMENT
+  TOWNHOUSE
+  LOT
+  COMMERCIAL
+  OFFICE
+  WAREHOUSE
+}
+
+/// Lifecycle: DRAFT → PENDING (moderation) → ACTIVE → CLOSED | EXPIRED → ARCHIVED.
+enum ListingStatus {
+  DRAFT
+  PENDING
+  ACTIVE
+  REJECTED
+  EXPIRED
+  CLOSED // sold / rented / leased — see closedReason
+  ARCHIVED
+}
+
+enum ClosedReason {
+  SOLD
+  RENTED
+  LEASED
+  WITHDRAWN
+}
+
+enum Furnishing {
+  FULLY_FURNISHED
+  SEMI_FURNISHED
+  UNFURNISHED
+  FITTED
+  WARM_SHELL
+  BARE_SHELL
+  NOT_APPLICABLE
+}
+
+enum LocationLevel {
+  REGION
+  PROVINCE
+  CITY
+  AREA // barangay, district, village or development (e.g. BGC, Salcedo Village)
+}
+
+enum AmenityCategory {
+  RESIDENTIAL
+  COMMERCIAL
+  LOT
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  VIEWING_SCHEDULED
+  CLOSED
+  SPAM
+}
+
+enum ViewingStatus {
+  REQUESTED
+  CONFIRMED
+  DONE
+  CANCELLED
+  NO_SHOW
+}
+
+enum AlertFrequency {
+  NONE
+  INSTANT
+  DAILY
+  WEEKLY
+}
+
+enum PaymentPurpose {
+  SUBSCRIPTION
+  FEATURED_BOOST
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+enum ReportReason {
+  FAKE_LISTING
+  DUPLICATE
+  WRONG_PRICE
+  ALREADY_SOLD_OR_RENTED
+  SCAM
+  OFFENSIVE
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  ACTION_TAKEN
+  DISMISSED
+}
+
+// ─────────────────────────── People ───────────────────────────
+
+model User {
+  id              String     @id @default(cuid())
+  email           String?    @unique @db.Citext
+  phone           String?    @unique // E.164, e.g. +639171234567
+  name            String
+  passwordHash    String?
+  role            Role       @default(SEEKER)
+  status          UserStatus @default(ACTIVE)
+  avatarUrl       String?
+  emailVerifiedAt DateTime?
+  phoneVerifiedAt DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  agentProfile   AgentProfile?
+  sessions       Session[]
+  postedListings Listing[]      @relation("ListingPoster")
+  agentListings  Listing[]      @relation("ListingAgent")
+  favorites      Favorite[]
+  savedSearches  SavedSearch[]
+  inquiriesSent  Inquiry[]      @relation("InquirySender")
+  messages       Message[]
+  viewings       Viewing[]
+  payments       Payment[]
+  subscriptions  Subscription[]
+  reportsFiled   Report[]       @relation("ReportFiler")
+  reportsHandled Report[]       @relation("ReportHandler")
+  auditLogs      AuditLog[]
+}
+
+model AgentProfile {
+  userId            String    @id
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agencyId          String?
+  agency            Agency?   @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  /// PRC license number (RA 9646 / RESA Law). Unique so one license can't back several accounts.
+  prcLicenseNo      String?   @unique
+  licenseVerifiedAt DateTime?
+  bio               String?
+  publicPhone       String?
+  /// Rolling stats, refreshed by a background job.
+  responseRate      Float?
+  medianResponseMin Int?
+
+  @@index([agencyId])
+}
+
+model Agency {
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  logoUrl       String?
+  verifiedAt    DateTime?
+  createdAt     DateTime       @default(now())
+  agents        AgentProfile[]
+  listings      Listing[]
+  subscriptions Subscription[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 of the session token; the raw token only ever lives in the cookie.
+  tokenHash String   @unique
+  userAgent String?
+  ipHash    String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model OtpCode {
+  id        String    @id @default(cuid())
+  phone     String
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([phone, createdAt])
+}
+
+// ─────────────────────────── Places ───────────────────────────
+
+/// Philippine location tree. `psgcCode` links to the PSA's Philippine Standard Geographic Code where one exists.
+model Location {
+  id       String        @id @default(cuid())
+  psgcCode String?       @unique
+  name     String
+  /// Full path slug, unique across the tree: "metro-manila/makati/salcedo-village".
+  slug     String        @unique
+  level    LocationLevel
+  parentId String?
+  parent   Location?     @relation("LocationTree", fields: [parentId], references: [id])
+  children Location[]    @relation("LocationTree")
+  lat      Float?
+  lng      Float?
+
+  cityListings Listing[] @relation("ListingCity")
+  areaListings Listing[] @relation("ListingArea")
+
+  @@index([parentId])
+  @@index([level])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
+}
+
+// ─────────────────────────── Listings ───────────────────────────
+
+model Listing {
+  id           String        @id @default(cuid())
+  /// Human-friendly reference shown to users and used in URLs, e.g. "PN-10042".
+  refCode      String        @unique
+  mode         ListingMode
+  type         PropertyType
+  status       ListingStatus @default(DRAFT)
+  closedReason ClosedReason?
+
+  title       String
+  description String
+  /// BUY: total price. RENT / LEASE: monthly rate. Philippine pesos.
+  price       Decimal @db.Decimal(15, 2)
+
+  bedrooms   Int?
+  bathrooms  Int?
+  floorArea  Int? // sqm
+  lotArea    Int? // sqm
+  parking    Int?
+  furnishing Furnishing @default(NOT_APPLICABLE)
+
+  /// Mode-specific terms, validated in code (see src/lib/terms.ts):
+  /// BUY   { titleStatus, financing[] }
+  /// RENT  { depositMonths, advanceMonths, minStayMonths, petFriendly }
+  /// LEASE { minTermYears, escalationPct, depositMonths, advanceMonths, cusaPerSqm }
+  terms Json @default("{}")
+
+  cityId      String
+  city        Location  @relation("ListingCity", fields: [cityId], references: [id])
+  areaId      String?
+  area        Location? @relation("ListingArea", fields: [areaId], references: [id])
+  /// Street / building. Only shown after an inquiry when hideAddress is true.
+  address     String?
+  hideAddress Boolean   @default(true)
+  lat         Float?
+  lng         Float?
+
+  posterId String
+  poster   User    @relation("ListingPoster", fields: [posterId], references: [id])
+  agentId  String?
+  agent    User?   @relation("ListingAgent", fields: [agentId], references: [id])
+  agencyId String?
+  agency   Agency? @relation(fields: [agencyId], references: [id])
+
+  featuredUntil DateTime?
+  verifiedAt    DateTime?
+  publishedAt   DateTime?
+  expiresAt     DateTime?
+  /// Denormalized counters, flushed in batches from Redis by a worker (never incremented per request).
+  viewCount     Int       @default(0)
+  saveCount     Int       @default(0)
+  inquiryCount  Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  photos     ListingPhoto[]
+  amenities  ListingAmenity[]
+  favorites  Favorite[]
+  inquiries  Inquiry[]
+  viewings   Viewing[]
+  boosts     FeaturedBoost[]
+  payments   Payment[]
+  reports    Report[]
+  dailyStats ListingStatDaily[]
+
+  // Search paths: most queries filter status=ACTIVE plus mode, then type/city/price.
+  @@index([status, mode, type, price])
+  @@index([status, mode, cityId, price])
+  @@index([status, mode, publishedAt(sort: Desc)])
+  @@index([status, featuredUntil])
+  @@index([lat, lng])
+  @@index([posterId])
+  @@index([agentId])
+  @@index([agencyId])
+  @@index([expiresAt])
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
+}
+
+model ListingPhoto {
+  id         String   @id @default(cuid())
+  listingId  String
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  /// Object-storage key (or a full URL for seeded / legacy photos).
+  storageKey String
+  width      Int?
+  height     Int?
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([listingId, position])
+}
+
+model Amenity {
+  id       String           @id @default(cuid())
+  slug     String           @unique
+  name     String
+  category AmenityCategory
+  listings ListingAmenity[]
+}
+
+model ListingAmenity {
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  amenityId String
+  amenity   Amenity @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([listingId, amenityId])
+  @@index([amenityId])
+}
+
+// ─────────────────────── Seeker activity ───────────────────────
+
+model Favorite {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, listingId])
+  @@index([listingId])
+}
+
+model SavedSearch {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  /// Same shape as the search query string (mode, type, q, min, max, beds, ...).
+  query          Json
+  alertFrequency AlertFrequency @default(DAILY)
+  lastNotifiedAt DateTime?
+  createdAt      DateTime       @default(now())
+
+  @@index([userId])
+  @@index([alertFrequency, lastNotifiedAt])
+}
+
+model Inquiry {
+  id            String        @id @default(cuid())
+  listingId     String
+  listing       Listing       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  senderId      String?
+  sender        User?         @relation("InquirySender", fields: [senderId], references: [id], onDelete: SetNull)
+  name          String
+  email         String
+  phone         String?
+  company       String?
+  preferredDate DateTime?
+  message       String
+  status        InquiryStatus @default(NEW)
+  /// Hashed, for rate limiting and abuse review without storing raw IPs.
+  ipHash        String?
+  createdAt     DateTime      @default(now())
+  firstReplyAt  DateTime?
+
+  messages Message[]
+  viewings Viewing[]
+
+  @@index([listingId, createdAt(sort: Desc)])
+  @@index([senderId])
+  @@index([status])
+}
+
+model Message {
+  id        String    @id @default(cuid())
+  inquiryId String
+  inquiry   Inquiry   @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User      @relation(fields: [senderId], references: [id])
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([inquiryId, createdAt])
+}
+
+model Viewing {
+  id          String        @id @default(cuid())
+  listingId   String
+  listing     Listing       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  inquiryId   String?
+  inquiry     Inquiry?      @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  seekerId    String?
+  seeker      User?         @relation(fields: [seekerId], references: [id], onDelete: SetNull)
+  scheduledAt DateTime
+  status      ViewingStatus @default(REQUESTED)
+  notes       String?
+  createdAt   DateTime      @default(now())
+
+  @@index([listingId, scheduledAt])
+}
+
+// ─────────────────────────── Money ───────────────────────────
+
+model Plan {
+  id              String         @id @default(cuid())
+  code            String         @unique // e.g. "agent-basic", "agent-pro"
+  name            String
+  priceMonthly    Decimal        @db.Decimal(10, 2)
+  listingLimit    Int
+  featuredCredits Int            @default(0) // free boosts per month
+  active          Boolean        @default(true)
+  subscriptions   Subscription[]
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  userId           String?
+  user             User?              @relation(fields: [userId], references: [id])
+  agencyId         String?
+  agency           Agency?            @relation(fields: [agencyId], references: [id])
+  planId           String
+  plan             Plan               @relation(fields: [planId], references: [id])
+  status           SubscriptionStatus
+  currentPeriodEnd DateTime
+  provider         String // "paymongo" | "xendit"
+  providerRef      String?            @unique
+  createdAt        DateTime           @default(now())
+  cancelledAt      DateTime?
+
+  @@index([userId])
+  @@index([agencyId])
+  @@index([status, currentPeriodEnd])
+}
+
+model Payment {
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  purpose     PaymentPurpose
+  amount      Decimal        @db.Decimal(10, 2)
+  currency    String         @default("PHP")
+  status      PaymentStatus  @default(PENDING)
+  provider    String
+  /// Provider's payment/intent id. Unique so a replayed webhook can't record a payment twice.
+  providerRef String?        @unique
+  listingId   String?
+  listing     Listing?       @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
+  paidAt      DateTime?
+
+  boosts FeaturedBoost[]
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model FeaturedBoost {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  paymentId String?
+  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  startsAt  DateTime
+  endsAt    DateTime
+  createdAt DateTime @default(now())
+
+  @@index([listingId, endsAt])
+}
+
+// ───────────────────── Trust, safety, analytics ─────────────────────
+
+model Report {
+  id          String       @id @default(cuid())
+  listingId   String
+  listing     Listing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reporterId  String?
+  reporter    User?        @relation("ReportFiler", fields: [reporterId], references: [id], onDelete: SetNull)
+  reason      ReportReason
+  details     String?
+  status      ReportStatus @default(OPEN)
+  handledById String?
+  handledBy   User?        @relation("ReportHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  resolvedAt  DateTime?
+
+  @@index([status, createdAt])
+  @@index([listingId])
+}
+
+model ListingStatDaily {
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  views     Int      @default(0)
+  saves     Int      @default(0)
+  inquiries Int      @default(0)
+
+  @@id([listingId, date])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String // e.g. "listing.approve", "user.suspend"
+  entityType String
+  entityId   String
+  data       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+}

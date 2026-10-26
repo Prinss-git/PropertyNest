@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PropertyNest: Buy, Rent &amp; Lease Property in the Philippines</title>
+  <meta name="description" content="Search houses, condos, offices, retail spaces and warehouses to buy, rent, or lease across the Philippines.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <main>
+    <!-- Hero + search -->
+    <section class="hero">
+      <div class="container">
+        <h1>Find your next place.<br>Buy, rent, or lease.</h1>
+        <p class="lead">Homes, condos, offices, retail spaces, and warehouses from verified agents and owners across the Philippines.</p>
+
+        <form class="search-box" id="hero-search" autocomplete="off">
+          <div class="search-tabs" role="tablist">
+            <button type="button" class="search-tab active" data-mode="buy" role="tab">Buy</button>
+            <button type="button" class="search-tab" data-mode="rent" role="tab">Rent</button>
+            <button type="button" class="search-tab" data-mode="lease" role="tab">Lease</button>
+          </div>
+          <div class="search-fields">
+            <div class="field">
+              <label for="q">Location</label>
+              <input class="input" id="q" name="q" list="loc-list" placeholder="City, area, or landmark (e.g. BGC, Makati)">
+              <datalist id="loc-list"></datalist>
+            </div>
+            <div class="field">
+              <label for="type">Property type</label>
+              <select class="select" id="type" name="type"></select>
+            </div>
+            <div class="field">
+              <label for="price">Price</label>
+              <select class="select" id="price" name="price"></select>
+            </div>
+            <button class="btn btn-primary" type="submit">Search</button>
+          </div>
+          <div class="search-hint" id="search-hint"></div>
+        </form>
+
+        <div class="hero-stats" id="hero-stats"></div>
+      </div>
+    </section>
+
+    <!-- Buy / Rent / Lease explainer -->
+    <section class="block">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>Buy, rent, or lease: pick what fits</h2>
+            <p>Each option has its own price format, terms, and filters.</p>
+          </div>
+        </div>
+        <div class="mode-grid" id="mode-grid"></div>
+      </div>
+    </section>
+
+    <!-- Property types -->
+    <section class="block soft">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>Browse by property type</h2>
+            <p id="type-sub">Showing what's available to buy</p>
+          </div>
+          <div class="pill-tabs" data-switch="types">
+            <button class="active" data-mode="buy">Buy</button>
+            <button data-mode="rent">Rent</button>
+            <button data-mode="lease">Lease</button>
+          </div>
+        </div>
+        <div class="type-grid" id="type-grid"></div>
+      </div>
+    </section>
+
+    <!-- Featured -->
+    <section class="block">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>Featured listings</h2>
+            <p>Hand-picked properties from verified agents</p>
+          </div>
+          <div class="pill-tabs" data-switch="featured">
+            <button class="active" data-mode="buy">Buy</button>
+            <button data-mode="rent">Rent</button>
+            <button data-mode="lease">Lease</button>
+          </div>
+        </div>
+        <div class="listing-grid" id="featured-grid"></div>
+        <div style="text-align:center;margin-top:28px">
+          <a class="btn btn-outline" id="featured-more" href="listings.html?mode=buy">View all properties for sale</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Locations -->
+    <section class="block soft" id="locations">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>Popular locations</h2>
+            <p>Where people are searching right now</p>
+          </div>
+        </div>
+        <div class="loc-grid" id="loc-grid"></div>
+      </div>
+    </section>
+
+    <!-- Latest -->
+    <section class="block">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>Newly listed</h2>
+            <p>Fresh listings across all three categories</p>
+          </div>
+          <a href="listings.html?sort=newest" class="link-more">See all →</a>
+        </div>
+        <div class="listing-grid" id="latest-grid"></div>
+      </div>
+    </section>
+
+    <!-- Calculator -->
+    <section class="block soft" id="calculator">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>Home loan calculator</h2>
+            <p>Estimate your monthly amortization before you buy</p>
+          </div>
+        </div>
+        <div class="calc">
+          <div class="calc-form">
+            <div class="field" style="grid-column:1/-1">
+              <label for="c-price">Property price (₱)</label>
+              <input class="input" id="c-price" type="number" min="0" step="50000" value="8000000">
+            </div>
+            <div class="field" style="grid-column:1/-1">
+              <label for="c-down">Down payment: <span id="c-down-v">20%</span></label>
+              <div class="range-row"><input id="c-down" type="range" min="0" max="80" step="5" value="20"></div>
+            </div>
+            <div class="field">
+              <label for="c-rate">Interest rate (% per year)</label>
+              <input class="input" id="c-rate" type="number" min="0" max="30" step="0.25" value="7.5">
+            </div>
+            <div class="field">
+              <label for="c-years">Loan term</label>
+              <select class="select" id="c-years">
+                <option value="5">5 years</option><option value="10">10 years</option><option value="15">15 years</option>
+                <option value="20" selected>20 years</option><option value="25">25 years</option><option value="30">30 years</option>
+              </select>
+            </div>
+          </div>
+          <div class="calc-result">
+            <span>Estimated monthly payment</span>
+            <div class="big" id="c-monthly">₱0</div>
+            <div class="row"><span>Loan amount</span><strong id="c-loan">₱0</strong></div>
+            <div class="row"><span>Down payment</span><strong id="c-downamt">₱0</strong></div>
+            <div class="row"><span>Total interest</span><strong id="c-interest">₱0</strong></div>
+            <a class="btn btn-primary" id="c-browse" href="listings.html?mode=buy">Browse homes in this budget</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="block">
+      <div class="container">
+        <div class="cta">
+          <div>
+            <h2>Have a property to sell, rent out, or lease?</h2>
+            <p>List it for free and reach buyers, tenants, and businesses looking right now.</p>
+          </div>
+          <a href="post.html" class="btn btn-primary">List your property</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/home.js"></script>
+</body>
+</html>
