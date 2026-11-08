@@ -43,6 +43,9 @@ and every SMS and email the system "sends" is listed under **Moderation → Mess
 | `npm run db:seed` | Reset sample data (wipes listings, users, inquiries) |
 | `npm run db:studio` | Browse the database in the browser |
 | `npm run typecheck` / `npm run lint` | Checks to run before committing |
+| `npm test` | API and browser tests (see Testing below) |
+| `npm run maintenance` | Run scheduled maintenance now (expiry, reminders, clean-up); the worker does it every 10 min |
+| `npm run create-admin -- --email … --name "…"` | Create the first admin on a fresh database, or promote an account |
 
 ## Layout
 
@@ -94,18 +97,26 @@ scripts/devdb.mjs           start/stop the local dev database
 Local load test (one Node process, 50 concurrent users, no CDN): cached home page ≈ 900 req/s,
 full search page ≈ 180 req/s, search API ≈ 600 req/s, zero errors.
 
-## Going-live checklist (Phase 1 items)
+## Testing
 
-- `SMS_PROVIDER=semaphore` with `SEMAPHORE_API_KEY`; `EMAIL_PROVIDER=resend` with `RESEND_API_KEY` and a verified sending domain.
-- Remove `OTP_DEV_ECHO`. Set fresh `OTP_SECRET` and `IP_HASH_SALT`. Set `SITE_URL=https://...` (this turns on secure cookies).
-- Google sign-in: create the OAuth client and add the production redirect URI.
-- Move photo storage to S3 or R2 (`src/lib/storage.ts`) and serve `/media` from a CDN.
-- Run at least one `npm run worker` process next to the app.
-- Maps: switch tiles to a keyed provider (MapTiler, Stadia or Geoapify) in `src/components/map/mapKit.ts`, and nearby places to Geoapify or a self-hosted Nominatim in `src/lib/nearby.ts`. The free OpenStreetMap services only allow light use.
-- Have a lawyer replace the draft terms, privacy, and cookie pages.
+The tests drive the running app like real users, so start it first, on freshly seeded data:
+
+```bash
+npm run db:seed && npm run build && npm start     # terminal 1
+npm run worker                                    # terminal 2
+npm run test:api                                  # terminal 3: ~120 API checks (about 1 minute)
+npm run test:ui                                   # browser flow in Chrome; screenshots in tests/output/
+```
+
+GitHub runs the same steps on every push (`.github/workflows/ci.yml`).
+
+## Going live
+
+See **[DEPLOY.md](DEPLOY.md)**: accounts to create, every setting, deploy steps, first admin, and checks.
+The app and worker refuse to start on an https site until the required settings are safe.
 
 ## Not built yet (next phases)
 
-- **Phase 2:** agent dashboards and stats, PayMongo payments (featured boosts + subscriptions), saved-search alerts,
-  agent profile pages, "become an agent" from account settings.
+- **Phase 2:** PayMongo payments (featured boosts + subscriptions), agent dashboards and public profile pages,
+  saved-search alerts, chat and viewing bookings, agency team accounts.
 - **Phase 3:** Redis cache and rate limits, dedicated search engine, map search, read replicas.

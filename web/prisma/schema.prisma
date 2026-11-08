@@ -157,6 +157,8 @@ model User {
   googleId        String?    @unique
   role            Role       @default(SEEKER)
   status          UserStatus @default(ACTIVE)
+  /// Why the account is suspended (shown to staff; the user sees a generic message).
+  statusReason    String?
   avatarUrl       String?
   emailVerifiedAt DateTime?
   phoneVerifiedAt DateTime?
@@ -341,14 +343,16 @@ model Listing {
   agencyId String?
   agency   Agency? @relation(fields: [agencyId], references: [id])
 
-  featuredUntil DateTime?
-  verifiedAt    DateTime?
-  publishedAt   DateTime?
-  expiresAt     DateTime?
+  featuredUntil    DateTime?
+  verifiedAt       DateTime?
+  publishedAt      DateTime?
+  expiresAt        DateTime?
+  /// When the "expires in 3 days" reminder went out, so it is sent once per expiry period.
+  expiryReminderAt DateTime?
   /// Denormalized counters, flushed in batches from Redis by a worker (never incremented per request).
-  viewCount     Int       @default(0)
-  saveCount     Int       @default(0)
-  inquiryCount  Int       @default(0)
+  viewCount        Int       @default(0)
+  saveCount        Int       @default(0)
+  inquiryCount     Int       @default(0)
 
   /// Automatic check results, e.g. [{"code":"price_low","message":"..."}]. Non-empty sends the listing to review.
   moderationFlags Json      @default("[]")
@@ -701,4 +705,49 @@ model NearbyCell {
   fetchedAt DateTime?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
+}
+
+/// Scheduled tasks (e.g. "maintenance"). A worker claims a run by moving lastStartedAt forward in one
+/// conditional UPDATE, so with several workers only one runs each task per interval.
+model CronRun {
+  name           String    @id
+  lastStartedAt  DateTime
+  lastFinishedAt DateTime?
+  /// Counts from the last run, shown on Moderation → Jobs.
+  lastResult     Json?
+}
+
+/// One row per rate-limited action (e.g. "signup:<ipHash>"). Counted over a time window; cleaned up by
+/// maintenance after a day. Moves to Redis when traffic needs it.
+model RateEvent {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
+enum ContactStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+/// Messages sent through the Contact page. Also emailed to SUPPORT_EMAIL when that's set.
+model ContactMessage {
+  id         String        @id @default(cuid())
+  userId     String?
+  name       String
+  email      String
+  phone      String?
+  topic      String
+  message    String
+  /// The listing it's about, when sent from a listing page.
+  listingRef String?
+  status     ContactStatus @default(OPEN)
+  ipHash     String?
+  createdAt  DateTime      @default(now())
+  handledAt  DateTime?
+
+  @@index([status, createdAt])
 }

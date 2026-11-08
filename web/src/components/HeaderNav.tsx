@@ -47,6 +47,7 @@ function AccountMenu() {
         {poster && <Link href="/account#listings" role="menuitem"><span>My listings</span></Link>}
         {poster && <Link href="/account/leads" role="menuitem"><span>Inquiries (leads)</span></Link>}
         <Link href="/saved" role="menuitem"><span>Saved listings</span></Link>
+        <Link href="/account/settings" role="menuitem"><span>Account settings</span></Link>
         {staff && <Link href="/admin" role="menuitem"><span>Moderation</span></Link>}
         <div className="nav-menu-sep" />
         <button type="button" className="nav-menu-btn" role="menuitem" onClick={signOut}>Sign out</button>

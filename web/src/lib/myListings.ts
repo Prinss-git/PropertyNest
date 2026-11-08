@@ -9,6 +9,7 @@ import { ensureNearbyCell } from "./jobs";
 import type { ListingInput } from "./listingInput";
 import { autoCheck, EXPIRY_DAYS, statusForFlags, type Flag } from "./moderation";
 import { cellKey } from "./nearby";
+import { photoUrl, storedPath } from "./storage";
 
 /** Listings that count toward a poster's limit. Plans with higher limits arrive with payments (Phase 2). */
 const LIMITS: Partial<Record<CurrentUser["role"], number>> = { OWNER: 3, SEEKER: 3, AGENT: 30, AGENCY_ADMIN: 200 };
@@ -43,7 +44,7 @@ async function resolvePhotos(user: CurrentUser, ids: string[], listingId?: strin
   ]);
   return ids.map((id) => {
     const u = uploads.find((x) => x.id === id);
-    if (u) return { storageKey: `/media/${u.storageKey}`, width: u.width, height: u.height, contentHash: u.contentHash, uploadId: u.id };
+    if (u) return { storageKey: storedPath(u.storageKey), width: u.width, height: u.height, contentHash: u.contentHash, uploadId: u.id };
     const p = existing.find((x) => x.id === id);
     if (p) return { storageKey: p.storageKey, width: p.width, height: p.height, contentHash: p.contentHash };
     throw new HttpError(400, "One of the photos is missing. Remove it and upload it again.");
@@ -57,6 +58,10 @@ function revalidateListing(ref: string) {
 }
 
 export async function saveListing(user: CurrentUser, input: ListingInput, existingRef?: string): Promise<{ ref: string; status: string; flags: Flag[] }> {
+  // A confirmed email or SMS-verified phone means we can reach the poster, and slows down throwaway scam accounts.
+  if (!user.verified) {
+    throw new HttpError(403, "Confirm your email before posting. Use the link we emailed you, or resend it from Account settings.");
+  }
   const existing = existingRef
     ? await db.listing.findUnique({ where: { refCode: existingRef }, select: { id: true, posterId: true, status: true, publishedAt: true, mode: true } })
     : null;
@@ -116,7 +121,7 @@ export async function saveListing(user: CurrentUser, input: ListingInput, existi
     moderationFlags: flags as unknown as Prisma.InputJsonValue,
     rejectionReason: null,
     ...(goingLive
-      ? { publishedAt: existing?.publishedAt ?? now, expiresAt: new Date(now.getTime() + EXPIRY_DAYS[input.mode] * 864e5) }
+      ? { publishedAt: existing?.publishedAt ?? now, expiresAt: new Date(now.getTime() + EXPIRY_DAYS[input.mode] * 864e5), expiryReminderAt: null }
       : {}),
   };
 
@@ -183,7 +188,7 @@ export async function changeListingStatus(user: CurrentUser, ref: string, action
   } else if (action === "renew") {
     if (!["ACTIVE", "EXPIRED"].includes(l.status)) throw new HttpError(409, "Only live or expired listings can be renewed.");
     const mode = l.mode.toLowerCase() as ListingInput["mode"];
-    data = { status: "ACTIVE", expiresAt: new Date(Date.now() + EXPIRY_DAYS[mode] * 864e5) };
+    data = { status: "ACTIVE", expiresAt: new Date(Date.now() + EXPIRY_DAYS[mode] * 864e5), expiryReminderAt: null };
   } else {
     data = { status: "ARCHIVED" };
   }
@@ -227,7 +232,7 @@ export async function getListingForEdit(user: CurrentUser, ref: string) {
       lng: l.lng,
       showExactLocation: !l.hideAddress,
     },
-    photos: l.photos.map((p) => ({ id: p.id, url: p.storageKey })),
+    photos: l.photos.map((p) => ({ id: p.id, url: photoUrl(p.storageKey) })),
   };
 }
 export type EditableListing = NonNullable<Awaited<ReturnType<typeof getListingForEdit>>>;

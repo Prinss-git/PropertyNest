@@ -652,3 +652,48 @@ a.stat:hover { border-color: var(--brand); }
 /* Search results map */
 .results-map { height: 460px; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 20px; }
 @media (max-width: 700px) { .results-map { height: 360px; } }
+
+/* Account settings */
+.settings { padding-block: 24px 64px; display: grid; gap: 18px; max-width: 860px; }
+.settings-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; background: #fff; display: grid; gap: 12px; }
+.settings-card h2 { margin: 0; font-size: 18px; }
+.settings-card > .muted { margin: 0; }
+.settings-form { display: grid; gap: 12px; }
+.form-grid.two-col { grid-template-columns: 1fr 1fr; }
+.settings-rows { display: grid; gap: 10px; }
+.settings-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.settings-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.settings-row > div { display: grid; gap: 2px; min-width: 0; }
+.inline-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.inline-row .input { flex: 1 1 200px; width: auto; }
+.code-input.small { font-size: 18px; letter-spacing: 6px; flex: 0 1 160px; }
+.danger-zone { border-color: #fecdca; }
+.danger-solid { background: #b42318; color: #fff; }
+.danger-solid:hover { background: #912018; }
+.danger-solid:disabled { opacity: .5; }
+@media (max-width: 700px) { .form-grid.two-col { grid-template-columns: 1fr; } }
+.head-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* Admin users */
+.admin-search { display: flex; gap: 8px; flex-wrap: wrap; }
+.admin-search .input { flex: 1 1 280px; width: auto; }
+.admin-search .select { width: auto; }
+.link-strong { font-weight: 600; color: var(--brand); }
+.data-table a { color: var(--brand); }
+.spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 20px; font-size: 14px; }
+.spec-grid > div { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.spec-grid span:first-child { font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); font-weight: 600; }
+.settings-card > .btn, .settings-card > div > .btn { justify-self: start; }
+.spec-grid .pill { justify-self: start; }
+
+/* Help center and footer links */
+.faq { display: grid; gap: 4px; }
+.faq details { border-bottom: 1px solid var(--line); padding: 10px 0; }
+.faq details:last-child { border-bottom: 0; }
+.faq summary { cursor: pointer; font-weight: 600; }
+.faq summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.faq details > div { margin-top: 8px; }
+.faq a, .settings a:not(.btn) { color: var(--brand); }
+.pill-tabs a:not(.active):hover { color: var(--brand); }
+.footer-links { display: inline-flex; gap: 14px; flex-wrap: wrap; }
+.page-head p a { color: var(--brand); font-weight: 600; }

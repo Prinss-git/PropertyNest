@@ -31,6 +31,7 @@ export const POST = handle(async (req: Request, { params }: { params: Promise<{ 
           moderationFlags: [],
           publishedAt: l.publishedAt ?? now,
           expiresAt: new Date(now.getTime() + EXPIRY_DAYS[l.mode.toLowerCase() as "buy"] * 864e5),
+          expiryReminderAt: null,
         }
       : { status: d.decision === "reject" ? ("REJECTED" as const) : ("ARCHIVED" as const), reviewedAt: now, rejectionReason: d.reason };
 

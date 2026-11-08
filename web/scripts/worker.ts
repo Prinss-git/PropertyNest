@@ -2,10 +2,13 @@
  * Background worker: sends SMS/email and runs other queued jobs.
  *   npm run worker
  * Runs two lanes: "fast" (SMS, email, alerts) and "slow" (map lookups that take ~20 s each),
- * so an inquiry alert never waits behind a map lookup. Run one per server; more for throughput.
+ * so an inquiry alert never waits behind a map lookup. It also runs scheduled maintenance (listing expiry,
+ * clean-up) every 10 minutes; with several workers only one runs it. Run one per server; more for throughput.
  */
 import { db } from "../src/lib/db";
+import { assertEnv } from "../src/lib/env";
 import { runDueJobs } from "../src/lib/jobs";
+import { runMaintenanceIfDue } from "../src/lib/maintenance";
 
 const IDLE_MS = 2000;
 let stopping = false;
@@ -30,10 +33,24 @@ async function lane(name: "fast" | "slow", batch: number) {
   }
 }
 
+/** Checks every minute whether maintenance is due (it runs every 10 minutes across all workers). */
+async function scheduler() {
+  while (!stopping) {
+    try {
+      const result = await runMaintenanceIfDue();
+      if (result) console.log("[maintenance]", JSON.stringify(result));
+    } catch (e) {
+      console.error("[maintenance] failed:", e);
+    }
+    for (let i = 0; i < 30 && !stopping; i++) await new Promise((r) => setTimeout(r, IDLE_MS));
+  }
+}
+
 async function main() {
+  assertEnv("The worker");
   console.log(`Worker started (SMS: ${process.env.SMS_PROVIDER ?? "console"}, email: ${process.env.EMAIL_PROVIDER ?? "console"})`);
   // The slow lane takes one job at a time: the places service allows ~1 request per second in total.
-  await Promise.all([lane("fast", 20), lane("slow", 1)]);
+  await Promise.all([lane("fast", 20), lane("slow", 1), scheduler()]);
   await db.$disconnect();
 }
 

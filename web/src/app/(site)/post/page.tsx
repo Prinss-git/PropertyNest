@@ -4,6 +4,7 @@ import { ListingForm } from "@/components/listingForm/ListingForm";
 import { emptyValues } from "@/lib/listingDefaults";
 import { requireUser } from "@/lib/auth";
 import { getCityOptions } from "@/lib/listings";
+import { EmailVerifyButton } from "../account/settings/SettingsSections";
 
 export const metadata: Metadata = { title: "List your property", robots: { index: false } };
 
@@ -26,7 +27,18 @@ export default async function PostPage() {
         </div>
       </div>
       <main className="container">
-        <ListingForm cities={cities} initial={emptyValues(makati.id)} />
+        {user.verified ? (
+          <ListingForm cities={cities} initial={emptyValues(makati.id)} />
+        ) : (
+          <div className="empty" style={{ marginBlock: 28 }}>
+            <h3>Confirm your email to post</h3>
+            <p>
+              We sent a confirmation link to <strong>{user.email}</strong>. Open it, then come back here.
+              <br />
+              No email? <EmailVerifyButton /> or <Link href="/account/settings">add a mobile number</Link> instead.
+            </p>
+          </div>
+        )}
       </main>
     </>
   );

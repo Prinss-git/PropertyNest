@@ -38,7 +38,7 @@ async function consumeToken(token: string, kind: AuthTokenKind) {
   return row.userId;
 }
 
-async function sendVerifyEmail(userId: string, email: string, name: string) {
+export async function sendVerifyEmail(userId: string, email: string, name: string) {
   const token = await issueToken(userId, "EMAIL_VERIFY");
   await enqueue("email.send", {
     to: email,
@@ -136,4 +136,15 @@ export async function resetPassword(token: string, password: string, meta: Meta)
 export async function verifyEmail(token: string) {
   const userId = await consumeToken(token, "EMAIL_VERIFY");
   await db.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } });
+}
+
+/** Re-sends the confirmation link; at most 3 per hour per account. Returns the address it went to. */
+export async function resendVerification(userId: string) {
+  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true, name: true, emailVerifiedAt: true } });
+  if (!user?.email) throw new HttpError(400, "Add an email address first.");
+  if (user.emailVerifiedAt) throw new HttpError(409, "Your email is already confirmed.");
+  const recent = await db.authToken.count({ where: { userId, kind: "EMAIL_VERIFY", createdAt: { gte: new Date(Date.now() - 3600e3) } } });
+  if (recent >= 3) throw new HttpError(429, "We've sent several links in the last hour. Check your spam folder, or try again later.");
+  await sendVerifyEmail(userId, user.email, user.name);
+  return user.email;
 }

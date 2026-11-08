@@ -1,0 +1,78 @@
+# Runs on every push and pull request: type check, lint, build, then the API and browser tests
+# against a fresh database with the app and worker running. A red ✗ on GitHub means don't deploy.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: propertynest
+          POSTGRES_PASSWORD: propertynest
+          POSTGRES_DB: propertynest
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U propertynest"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+
+    # Development-style settings: SMS and email go to the outbox, no outside map services are called.
+    env:
+      DATABASE_URL: postgresql://propertynest:propertynest@localhost:5432/propertynest?schema=public
+      SITE_URL: http://localhost:3000
+      OTP_SECRET: ci-only-otp-secret-0000000000000000000000
+      IP_HASH_SALT: ci-only-salt-00000000
+      OTP_DEV_ECHO: "1"
+      SMS_PROVIDER: console
+      EMAIL_PROVIDER: console
+      NEARBY_PROVIDER: none
+      UPLOAD_DIR: ../.uploads
+      CHROME_PATH: /usr/bin/google-chrome
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run db:seed
+
+      - name: Start app and worker
+        run: |
+          nohup npm start > app.log 2>&1 &
+          nohup npm run worker > worker.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf localhost:3000/api/health && exit 0; sleep 1; done
+          echo "App didn't start"; cat app.log; exit 1
+
+      - run: npm run test:api
+      - run: npm run test:ui
+
+      - name: App and worker logs
+        if: failure()
+        run: tail -n 200 app.log worker.log
+
+      - name: Keep screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: web/tests/output/
+          if-no-files-found: ignore

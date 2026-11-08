@@ -5,15 +5,20 @@ import type * as Leaflet from "leaflet";
 export type L = typeof Leaflet;
 export const loadLeaflet = async (): Promise<L> => (await import("leaflet")).default as unknown as L;
 
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+
 /**
- * Base map: OpenStreetMap's own tiles. Free and keyless, but their usage policy only allows light use,
- * so this is for development and demos. Before launch, switch to a keyed tile provider
- * (MapTiler, Stadia Maps or Geoapify, a few dollars a month at our volume) by changing this URL.
+ * Base map tiles. Default: OpenStreetMap's own tiles, free and keyless but for light use only.
+ * For launch set NEXT_PUBLIC_MAP_TILE_URL to a keyed provider (read at build time), e.g. Geoapify:
+ *   https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=YOUR_KEY
+ * and NEXT_PUBLIC_MAP_ATTRIBUTION to the attribution that provider requires.
  */
 export function addBaseLayer(L: L, map: Leaflet.Map) {
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  const url = process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  L.tileLayer(url, {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+    subdomains: "abcd",
+    attribution: process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || OSM_ATTRIBUTION,
   }).addTo(map);
 }
 

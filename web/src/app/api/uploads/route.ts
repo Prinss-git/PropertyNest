@@ -4,7 +4,7 @@ import sharp from "sharp";
 import { handle } from "@/lib/api";
 import { apiUser, HttpError } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { publicUrl, putObject } from "@/lib/storage";
+import { photoUrl, putObject, storedPath } from "@/lib/storage";
 
 const MAX_BYTES = 12 * 1024 * 1024;
 const MAX_PER_HOUR = 60;
@@ -54,5 +54,5 @@ export const POST = handle(async (req: Request) => {
       contentHash: createHash("sha256").update(large.data).digest("hex"),
     },
   });
-  return NextResponse.json({ id: upload.id, url: publicUrl(key), width: upload.width, height: upload.height }, { status: 201 });
+  return NextResponse.json({ id: upload.id, url: photoUrl(storedPath(key)), width: upload.width, height: upload.height }, { status: 201 });
 });

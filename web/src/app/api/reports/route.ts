@@ -4,6 +4,7 @@ import { z } from "zod";
 import { handle, readJson } from "@/lib/api";
 import { getCurrentUser, HttpError } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { rateLimit } from "@/lib/rateLimit";
 
 const schema = z.object({
   listingRef: z.string().min(1).max(20),
@@ -19,6 +20,7 @@ export const POST = handle(async (req: Request) => {
   const user = await getCurrentUser();
   if (!user) throw new HttpError(401, "Sign in to report a listing.");
   const d = schema.parse(await readJson(req));
+  await rateLimit(`report:${user.id}`, 20, 864e5, "You have sent a lot of reports today. Thank you. Please try again tomorrow.");
   const listing = await db.listing.findUnique({ where: { refCode: d.listingRef }, select: { id: true, status: true, posterId: true } });
   if (!listing) throw new HttpError(404, "Listing not found.");
   if (listing.posterId === user.id) throw new HttpError(400, "You can't report your own listing.");
