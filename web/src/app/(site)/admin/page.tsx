@@ -6,12 +6,14 @@ import { MODES, TYPES, peso, timeAgo, type Mode, type PropType } from "@/lib/cat
 import { db } from "@/lib/db";
 import type { Flag } from "@/lib/moderation";
 import { auditLabel, AuditRow } from "@/components/admin/AuditRow";
+import { SupportActions } from "@/components/admin/SupportActions";
+import { CONTACT_TOPICS } from "@/lib/support";
 import { formatPhMobile } from "@/lib/phone";
 import { smallVariant } from "@/lib/storage";
 
 export const metadata: Metadata = { title: "Moderation", robots: { index: false } };
 
-const TABS = [["queue", "Review queue"], ["reports", "Reports"], ["agents", "Agent licenses"], ["users", "Users"], ["activity", "Activity log"], ["outbox", "Messages sent"], ["jobs", "Jobs"]] as const;
+const TABS = [["queue", "Review queue"], ["reports", "Reports"], ["agents", "Agent licenses"], ["support", "Support"], ["users", "Users"], ["activity", "Activity log"], ["outbox", "Messages sent"], ["jobs", "Jobs"]] as const;
 type Tab = (typeof TABS)[number][0];
 
 type Params = { tab?: string; q?: string; status?: string; action?: string };
@@ -22,12 +24,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const tabParam = sp.tab;
   const tab: Tab = TABS.some(([t]) => t === tabParam) ? (tabParam as Tab) : "queue";
 
-  const [pendingCount, reportCount, agentCount] = await Promise.all([
+  const [pendingCount, reportCount, agentCount, supportCount] = await Promise.all([
     db.listing.count({ where: { status: "PENDING" } }),
     db.report.count({ where: { status: "OPEN" } }),
     db.agentProfile.count({ where: { prcLicenseNo: { not: null }, licenseVerifiedAt: null } }),
+    db.contactMessage.count({ where: { status: "OPEN" } }),
   ]);
-  const counts: Partial<Record<Tab, number>> = { queue: pendingCount, reports: reportCount, agents: agentCount };
+  const counts: Partial<Record<Tab, number>> = { queue: pendingCount, reports: reportCount, agents: agentCount, support: supportCount };
 
   return (
     <>
@@ -49,6 +52,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         {tab === "reports" && <Reports />}
         {tab === "agents" && <Agents />}
         {tab === "outbox" && <Outbox />}
+        {tab === "support" && <Support status={sp.status} />}
         {tab === "users" && <Users q={sp.q} status={sp.status} />}
         {tab === "activity" && <Activity action={sp.action} />}
         {tab === "jobs" && <Jobs />}
@@ -329,6 +333,40 @@ async function Activity({ action }: { action?: string }) {
           </tbody>
         </table>
       </div>
+    </>
+  );
+}
+
+async function Support({ status }: { status?: string }) {
+  const filter = status === "ANSWERED" || status === "CLOSED" ? status : "OPEN";
+  const msgs = await db.contactMessage.findMany({ where: { status: filter }, orderBy: { createdAt: filter === "OPEN" ? "asc" : "desc" }, take: 100 });
+  const topic = (t: string) => CONTACT_TOPICS.find(([v]) => v === t)?.[1] ?? t;
+  return (
+    <>
+      <div className="pill-tabs" style={{ justifySelf: "start" }}>
+        {(["OPEN", "ANSWERED", "CLOSED"] as const).map((s) => (
+          <Link key={s} href={`/admin?tab=support&status=${s}`} className={filter === s ? "active" : ""}>{s === "OPEN" ? "Open" : s === "ANSWERED" ? "Answered" : "Closed"}</Link>
+        ))}
+      </div>
+      {msgs.length === 0 ? (
+        <div className="empty"><h3>No {filter.toLowerCase()} messages</h3><p>Messages from the Contact page show up here{process.env.SUPPORT_EMAIL ? ` and are emailed to ${process.env.SUPPORT_EMAIL}` : ""}.</p></div>
+      ) : (
+        <div className="mod-list">
+          {msgs.map((m) => (
+            <article key={m.id} className="mod-item no-photos">
+              <div className="mod-body">
+                <div className="muted" style={{ fontSize: 13 }}>
+                  {topic(m.topic)} · {timeAgo(m.createdAt)}{m.listingRef ? <> · about <Link href={`/property/${m.listingRef}`}>{m.listingRef}</Link></> : null}
+                  {m.userId ? <> · <Link href={`/admin/users/${m.userId}`}>has an account</Link></> : " · not logged in"}
+                </div>
+                <strong>{m.name} <span className="muted" style={{ fontWeight: 400 }}>{m.email}{m.phone ? ` · ${m.phone}` : ""}</span></strong>
+                <p className="lead-msg">{m.message}</p>
+                <SupportActions id={m.id} status={m.status} email={m.email} subject={topic(m.topic)} />
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </>
   );
 }

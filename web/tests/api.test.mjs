@@ -365,6 +365,41 @@ ok(activity.includes("Suspended an account") && activity.includes("Reactivated a
 ok((await mod.req(`/admin/users/${cat.id}`)).text.includes("Reused another agent"), "user page shows their history");
 ok((await ec.req(`/admin/users/${cat.id}`)).status >= 300 && (await ec.req("/api/auth/me")).json.user !== null, "a signed-in non-staff user can't open user pages");
 
+console.log("\n15. Contact page and support inbox");
+const helper = new Client("198.51.100.230");
+r = await helper.req("/api/contact", { body: { name: "Ana Cruz", email: "ana@example.com", topic: "scam", message: "Someone asked me to send a GCash reservation before viewing.", listingRef: "PN-10005" } });
+ok(r.status === 201, "contact message is accepted", JSON.stringify(r.json));
+r = await helper.req("/api/contact", { body: { name: "Bot", email: "bot@example.com", topic: "other", message: "Buy followers cheap now!!!", website: "spam.example" } });
+ok(r.status === 200 && !r.json.id, "the bot trap quietly drops spam");
+r = await helper.req("/api/contact", { body: { name: "A", email: "nope", topic: "other", message: "hi" } });
+ok(r.status === 400, "bad input is rejected", r.status);
+const inbox = (await mod.req("/admin?tab=support")).text;
+ok(inbox.includes("Ana Cruz") && inbox.includes("GCash reservation"), "message shows in Moderation → Support");
+const supportMsg = await db.contactMessage.findFirst({ where: { email: "ana@example.com" }, orderBy: { createdAt: "desc" } });
+r = await mod.req(`/api/admin/contact/${supportMsg.id}`, { body: { status: "ANSWERED" } });
+ok(r.status === 200 && (await db.contactMessage.findUnique({ where: { id: supportMsg.id } })).status === "ANSWERED", "staff can mark it answered");
+r = await helper.req(`/api/admin/contact/${supportMsg.id}`, { body: { status: "CLOSED" } });
+ok(r.status === 401, "visitors can't change support messages", r.status);
+const pages = await Promise.all(["/help", "/contact"].map((p) => fetch(BASE + p)));
+ok(pages.every((p) => p.status === 200), "Help and Contact pages load");
+
+console.log("\n16. Abuse limits and security headers");
+const flood = new Client("198.51.100.240");
+const codesSeen = [];
+for (let i = 0; i < 6; i++) {
+  codesSeen.push((await flood.req("/api/auth/signup", { body: { name: "Flood Test", email: `flood.${rand()}@example.com`, password: "Flood-test-2026", role: "SEEKER" } })).status);
+}
+ok(codesSeen.slice(0, 5).every((s) => s === 201) && codesSeen[5] === 429, "6th sign-up from one network within an hour is blocked", codesSeen.join(","));
+// Faking the IP header doesn't help: only the last address (added by our proxy) counts.
+const spoof = new Client("1.2.3.4, 198.51.100.240");
+r = await spoof.req("/api/auth/signup", { body: { name: "Flood Test", email: `flood.${rand()}@example.com`, password: "Flood-test-2026", role: "SEEKER" } });
+ok(r.status === 429, "a made-up IP at the front of X-Forwarded-For doesn't bypass the limit", r.status);
+const head = await fetch(BASE + "/");
+const csp = head.headers.get("content-security-policy") ?? "";
+ok(csp.includes("frame-ancestors 'none'") && csp.includes("default-src 'self'"), "pages send a content security policy");
+ok(head.headers.get("x-frame-options") === "DENY" && head.headers.get("x-content-type-options") === "nosniff", "framing and type sniffing are blocked");
+ok(!head.headers.get("x-powered-by"), "the server doesn't advertise its software");
+
 await db.$disconnect();
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

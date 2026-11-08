@@ -9,6 +9,7 @@ import { ensureNearbyCell } from "./jobs";
 import type { ListingInput } from "./listingInput";
 import { autoCheck, EXPIRY_DAYS, statusForFlags, type Flag } from "./moderation";
 import { cellKey } from "./nearby";
+import { photoUrl, storedPath } from "./storage";
 
 /** Listings that count toward a poster's limit. Plans with higher limits arrive with payments (Phase 2). */
 const LIMITS: Partial<Record<CurrentUser["role"], number>> = { OWNER: 3, SEEKER: 3, AGENT: 30, AGENCY_ADMIN: 200 };
@@ -43,7 +44,7 @@ async function resolvePhotos(user: CurrentUser, ids: string[], listingId?: strin
   ]);
   return ids.map((id) => {
     const u = uploads.find((x) => x.id === id);
-    if (u) return { storageKey: `/media/${u.storageKey}`, width: u.width, height: u.height, contentHash: u.contentHash, uploadId: u.id };
+    if (u) return { storageKey: storedPath(u.storageKey), width: u.width, height: u.height, contentHash: u.contentHash, uploadId: u.id };
     const p = existing.find((x) => x.id === id);
     if (p) return { storageKey: p.storageKey, width: p.width, height: p.height, contentHash: p.contentHash };
     throw new HttpError(400, "One of the photos is missing. Remove it and upload it again.");
@@ -231,7 +232,7 @@ export async function getListingForEdit(user: CurrentUser, ref: string) {
       lng: l.lng,
       showExactLocation: !l.hideAddress,
     },
-    photos: l.photos.map((p) => ({ id: p.id, url: p.storageKey })),
+    photos: l.photos.map((p) => ({ id: p.id, url: photoUrl(p.storageKey) })),
   };
 }
 export type EditableListing = NonNullable<Awaited<ReturnType<typeof getListingForEdit>>>;

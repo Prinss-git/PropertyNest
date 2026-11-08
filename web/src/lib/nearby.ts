@@ -1,10 +1,10 @@
 // Nearby places (schools, hospitals, malls, stations, parks...) for the property map.
 // Used by the worker and the web app, so no Next.js-only imports.
 //
-// Data comes from OpenStreetMap through Nominatim, cached per ~1 km grid cell in NearbyCell.
-// Nominatim's usage policy allows about 1 request per second and asks heavy users to self-host,
-// so production should switch to a paid places API (e.g. Geoapify, which Lamudi uses) or a
-// self-hosted Nominatim/Overpass, behind the same fetchCell() function.
+// Places are cached per ~1 km grid cell in NearbyCell. NEARBY_PROVIDER picks the source:
+//   nominatim (default): OpenStreetMap, free, ~1 request per second, light use only (development, demos).
+//   geoapify: paid places API (what Lamudi uses), one request per cell; set GEOAPIFY_API_KEY. For launch.
+//   none: no lookups (tests and CI).
 import { db } from "./db";
 
 export type NearbyCategory = "education" | "healthcare" | "services" | "leisure" | "transport";
@@ -63,14 +63,74 @@ async function fetchCellFromNominatim(key: string): Promise<NearbyPlace[]> {
   return out;
 }
 
-/** Fills one cell (called by the worker). */
+/** Geoapify category → our category and label. First match wins, so specific categories come first. */
+const GEOAPIFY_MAP: [string, NearbyCategory, string][] = [
+  ["education.university", "education", "University"],
+  ["education.college", "education", "University"],
+  ["childcare.kindergarten", "education", "Preschool"],
+  ["education.school", "education", "School"],
+  ["healthcare.hospital", "healthcare", "Hospital"],
+  ["healthcare.clinic_or_praxis", "healthcare", "Clinic"],
+  ["healthcare.pharmacy", "healthcare", "Pharmacy"],
+  ["commercial.shopping_mall", "services", "Mall"],
+  ["commercial.supermarket", "services", "Supermarket"],
+  ["service.financial.bank", "services", "Bank"],
+  ["service.police", "services", "Police"],
+  ["religion.place_of_worship", "services", "Church"],
+  ["leisure.park", "leisure", "Park"],
+  ["sport.fitness", "leisure", "Gym"],
+  ["entertainment.cinema", "leisure", "Cinema"],
+  ["public_transport.train", "transport", "Train station"],
+  ["public_transport.subway", "transport", "Train station"],
+  ["public_transport.bus", "transport", "Bus station"],
+];
+
+/**
+ * Geoapify Places API (what Lamudi uses): one request per cell instead of one per category, and fine for
+ * production volume. Needs GEOAPIFY_API_KEY. Not yet tested against the live API (no key during development).
+ */
+async function fetchCellFromGeoapify(key: string): Promise<NearbyPlace[]> {
+  const apiKey = process.env.GEOAPIFY_API_KEY;
+  if (!apiKey) throw new Error("GEOAPIFY_API_KEY is not set");
+  const [lat, lng] = key.split(",").map(Number);
+  const pad = 0.016;
+  const params = new URLSearchParams({
+    categories: [...new Set(GEOAPIFY_MAP.map(([c]) => c))].join(","),
+    filter: `rect:${lng - pad},${lat + pad},${lng + pad},${lat - pad}`,
+    limit: "500",
+    lang: "en",
+    apiKey,
+  });
+  const res = await fetch(`https://api.geoapify.com/v2/places?${params}`, { signal: AbortSignal.timeout(20000) });
+  if (!res.ok) throw new Error(`Geoapify ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data = (await res.json()) as { features?: { properties: { name?: string; lat: number; lon: number; categories?: string[] } }[] };
+  const out: NearbyPlace[] = [];
+  const seen = new Set<string>();
+  for (const f of data.features ?? []) {
+    const p = f.properties;
+    if (!p.name) continue;
+    const match = GEOAPIFY_MAP.find(([c]) => p.categories?.some((pc) => pc === c || pc.startsWith(c + ".")));
+    if (!match) continue;
+    const id = `${p.name.toLowerCase()}|${p.lat.toFixed(4)}|${p.lon.toFixed(4)}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({ name: p.name, cat: match[1], type: match[2], lat: +p.lat.toFixed(6), lng: +p.lon.toFixed(6) });
+  }
+  return out;
+}
+
+/** Fills one cell (called by the worker). NEARBY_PROVIDER: nominatim (default) | geoapify | none. */
 export async function fetchCell(key: string) {
   // A duplicate job for a cell that's already fresh does nothing (saves the places service).
   const cell = await db.nearbyCell.findUnique({ where: { key }, select: { status: true, fetchedAt: true } });
   if (cell?.status === "READY" && cell.fetchedAt && Date.now() - cell.fetchedAt.getTime() < CELL_MAX_AGE_MS) return;
+  const provider = process.env.NEARBY_PROVIDER ?? "nominatim";
   try {
-    const places = await fetchCellFromNominatim(key);
-    await db.nearbyCell.update({ where: { key }, data: { status: "READY", places, provider: "nominatim", error: null, fetchedAt: new Date() } });
+    const places =
+      provider === "geoapify" ? await fetchCellFromGeoapify(key)
+      : provider === "none" ? [] // tests and CI: don't call outside services
+      : await fetchCellFromNominatim(key);
+    await db.nearbyCell.update({ where: { key }, data: { status: "READY", places, provider, error: null, fetchedAt: new Date() } });
   } catch (e) {
     await db.nearbyCell.update({ where: { key }, data: { status: "FAILED", error: String(e).slice(0, 500) } });
     throw e;

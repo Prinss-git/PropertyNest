@@ -716,3 +716,38 @@ model CronRun {
   /// Counts from the last run, shown on Moderation → Jobs.
   lastResult     Json?
 }
+
+/// One row per rate-limited action (e.g. "signup:<ipHash>"). Counted over a time window; cleaned up by
+/// maintenance after a day. Moves to Redis when traffic needs it.
+model RateEvent {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
+enum ContactStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+/// Messages sent through the Contact page. Also emailed to SUPPORT_EMAIL when that's set.
+model ContactMessage {
+  id         String        @id @default(cuid())
+  userId     String?
+  name       String
+  email      String
+  phone      String?
+  topic      String
+  message    String
+  /// The listing it's about, when sent from a listing page.
+  listingRef String?
+  status     ContactStatus @default(OPEN)
+  ipHash     String?
+  createdAt  DateTime      @default(now())
+  handledAt  DateTime?
+
+  @@index([status, createdAt])
+}

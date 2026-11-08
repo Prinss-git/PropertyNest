@@ -6,6 +6,7 @@
  * clean-up) every 10 minutes; with several workers only one runs it. Run one per server; more for throughput.
  */
 import { db } from "../src/lib/db";
+import { assertEnv } from "../src/lib/env";
 import { runDueJobs } from "../src/lib/jobs";
 import { runMaintenanceIfDue } from "../src/lib/maintenance";
 
@@ -46,6 +47,7 @@ async function scheduler() {
 }
 
 async function main() {
+  assertEnv("The worker");
   console.log(`Worker started (SMS: ${process.env.SMS_PROVIDER ?? "console"}, email: ${process.env.EMAIL_PROVIDER ?? "console"})`);
   // The slow lane takes one job at a time: the places service allows ~1 request per second in total.
   await Promise.all([lane("fast", 20), lane("slow", 1), scheduler()]);

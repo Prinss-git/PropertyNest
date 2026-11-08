@@ -685,3 +685,15 @@ a.stat:hover { border-color: var(--brand); }
 .spec-grid span:first-child { font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); font-weight: 600; }
 .settings-card > .btn, .settings-card > div > .btn { justify-self: start; }
 .spec-grid .pill { justify-self: start; }
+
+/* Help center and footer links */
+.faq { display: grid; gap: 4px; }
+.faq details { border-bottom: 1px solid var(--line); padding: 10px 0; }
+.faq details:last-child { border-bottom: 0; }
+.faq summary { cursor: pointer; font-weight: 600; }
+.faq summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.faq details > div { margin-top: 8px; }
+.faq a, .settings a:not(.btn) { color: var(--brand); }
+.pill-tabs a:not(.active):hover { color: var(--brand); }
+.footer-links { display: inline-flex; gap: 14px; flex-wrap: wrap; }
+.page-head p a { color: var(--brand); font-weight: 600; }

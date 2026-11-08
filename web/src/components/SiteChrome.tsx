@@ -69,8 +69,18 @@ export function SiteFooter() {
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2026 PropertyNest. Sample listings for demonstration only.</span>
-          <span><Link href="/post">List your property</Link> · <Link href="/saved">Saved listings</Link></span>
+          <span>
+            © {new Date().getFullYear()} PropertyNest.
+            {/* Shown in development and on staging sites that use sample data (DEMO_MODE=1). */}
+            {(process.env.DEMO_MODE === "1" || !(process.env.SITE_URL ?? "").startsWith("https://")) && " Sample listings for demonstration only."}
+          </span>
+          <span className="footer-links">
+            <Link href="/help">Help</Link>
+            <Link href="/contact">Contact</Link>
+            <Link href="/terms">Terms</Link>
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/post">List your property</Link>
+          </span>
         </div>
       </div>
     </footer>

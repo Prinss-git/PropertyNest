@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { handle, readJson } from "@/lib/api";
 import { signUpWithEmail } from "@/lib/emailAuth";
+import { rateLimit } from "@/lib/rateLimit";
 import { clientIp, hashIp } from "@/lib/request";
 
 const schema = z.object({
@@ -15,9 +16,12 @@ const schema = z.object({
 // POST /api/auth/signup → creates an email + password account, emails a confirmation link, signs in.
 export const POST = handle(async (req: Request) => {
   const d = schema.parse(await readJson(req));
+  const ipHash = hashIp(clientIp(req));
+  // Stops one network from mass-creating accounts (scam listings, spam).
+  await rateLimit(`signup:${ipHash}`, 5, 3600e3, "Too many new accounts from your network. Please try again in an hour.");
   await signUpWithEmail(
     { ...d, prcLicenseNo: d.role === "AGENT" ? d.prcLicenseNo || undefined : undefined },
-    { ipHash: hashIp(clientIp(req)), userAgent: req.headers.get("user-agent") },
+    { ipHash, userAgent: req.headers.get("user-agent") },
   );
   return NextResponse.json({ ok: true }, { status: 201 });
 });

@@ -34,7 +34,8 @@ export async function suspendUser(actor: CurrentUser, userId: string, reason: st
     }
     await tx.auditLog.create({ data: { actorId: actor.id, action: "user.suspend", entityType: "User", entityId: userId, data: { reason, listingsHidden: live.length } } });
     // The person is told why, in general terms, and how to appeal.
-    const notice = "PropertyNest: Your account has been suspended for breaking our listing rules. To appeal, reply to support@propertynest.ph.";
+    const appeal = `${process.env.SITE_URL ?? "http://localhost:3000"}/contact?topic=appeal`;
+    const notice = `PropertyNest: Your account has been suspended for breaking our listing rules. To appeal, contact us at ${appeal}`;
     if (u.phone) await enqueue("sms.send", { to: u.phone, body: notice }, { tx });
     if (u.email) await enqueue("email.send", { to: u.email, subject: "Your PropertyNest account is suspended", text: `Hi ${u.name},\n\n${notice.replace("PropertyNest: ", "")}` }, { tx });
   });

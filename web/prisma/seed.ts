@@ -69,6 +69,10 @@ const DAY = 864e5;
 const DEMO_PASSWORD = "Nest-demo-2026";
 
 async function main() {
+  // Seeding wipes listings, users and inquiries. Never let it run against a live site by accident.
+  if ((process.env.SITE_URL ?? "").startsWith("https://") && process.env.ALLOW_SEED !== "1") {
+    throw new Error("Refusing to seed: SITE_URL is a live https site and seeding deletes all data. Set ALLOW_SEED=1 only for a throwaway staging database.");
+  }
   const data = loadSampleData();
   const now = Date.now();
 

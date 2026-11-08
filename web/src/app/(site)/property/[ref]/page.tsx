@@ -8,6 +8,7 @@ import { NearbyMap } from "@/components/map/NearbyMap";
 import { Gallery, InquiryForm, PhoneReveal, ReportListing, ShareButton, ViewTracker } from "@/components/property/PropertyClient";
 import { FURNISHING, MODES, RESIDENTIAL_TYPES, TYPES, peso, timeAgo, type Mode, type PropType } from "@/lib/catalog";
 import { publicPoint } from "@/lib/geo";
+import { photoUrl } from "@/lib/storage";
 import { getListing, getSimilar, type ListingDetail } from "@/lib/listings";
 
 // Cached per listing for a minute. Edits will also revalidate the page directly (Phase 1).
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: l.title,
     description: l.description.slice(0, 160),
-    openGraph: { title: l.title, description: l.description.slice(0, 160), images: l.photos[0] ? [l.photos[0].storageKey] : [] },
+    openGraph: { title: l.title, description: l.description.slice(0, 160), images: l.photos[0] ? [photoUrl(l.photos[0].storageKey)] : [] },
   };
 }
 
@@ -135,7 +136,7 @@ export default async function PropertyPage({ params }: Props) {
     name: l.title,
     description: l.description,
     datePosted: l.publishedAt?.toISOString(),
-    image: l.photos.map((p) => p.storageKey),
+    image: l.photos.map((p) => photoUrl(p.storageKey)),
     offers: { "@type": "Offer", price, priceCurrency: "PHP", businessFunction: mode === "buy" ? "http://purl.org/goodrelations/v1#Sell" : "http://purl.org/goodrelations/v1#LeaseOut" },
     address: { "@type": "PostalAddress", addressLocality: l.city.name, addressRegion: province, addressCountry: "PH" },
   };
@@ -149,7 +150,7 @@ export default async function PropertyPage({ params }: Props) {
         <Link href={`/listings?mode=${mode}&q=${encodeURIComponent(l.city.name)}`}>{l.city.name}</Link>
       </div>
 
-      <Gallery photos={l.photos.map((p) => p.storageKey)} title={l.title} icon={t.icon} />
+      <Gallery photos={l.photos.map((p) => photoUrl(p.storageKey))} title={l.title} icon={t.icon} />
       {l.status === "ACTIVE" && <ViewTracker refCode={l.refCode} />}
 
       <div className="detail-layout">

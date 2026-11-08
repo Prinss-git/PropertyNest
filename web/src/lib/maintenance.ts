@@ -88,6 +88,7 @@ export async function runMaintenance(now = new Date()) {
     sessionsDeleted: (await db.session.deleteMany({ where: { expiresAt: { lt: now } } })).count,
     linkTokensDeleted: (await db.authToken.deleteMany({ where: { OR: [{ expiresAt: { lt: ago(7) } }, { usedAt: { lt: ago(7) } }] } })).count,
     loginAttemptsDeleted: (await db.loginAttempt.deleteMany({ where: { createdAt: { lt: ago(7) } } })).count,
+    rateEventsDeleted: (await db.rateEvent.deleteMany({ where: { createdAt: { lt: ago(1) } } })).count,
     jobsDeleted: (await db.job.deleteMany({ where: { OR: [{ status: "DONE", finishedAt: { lt: ago(14) } }, { status: "FAILED", finishedAt: { lt: ago(90) } }] } })).count,
     messagesDeleted: (await db.outboundMessage.deleteMany({ where: { createdAt: { lt: ago(180) } } })).count,
   };
