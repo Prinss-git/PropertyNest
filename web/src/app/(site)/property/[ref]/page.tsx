@@ -5,7 +5,7 @@ import { FavButton } from "@/components/FavButton";
 import { Icon } from "@/components/Icon";
 import { ListingGrid } from "@/components/ListingCard";
 import { NearbyMap } from "@/components/map/NearbyMap";
-import { Gallery, InquiryForm, PhoneReveal, ReportListing, ShareButton } from "@/components/property/PropertyClient";
+import { Gallery, InquiryForm, PhoneReveal, ReportListing, ShareButton, ViewTracker } from "@/components/property/PropertyClient";
 import { FURNISHING, MODES, RESIDENTIAL_TYPES, TYPES, peso, timeAgo, type Mode, type PropType } from "@/lib/catalog";
 import { publicPoint } from "@/lib/geo";
 import { getListing, getSimilar, type ListingDetail } from "@/lib/listings";
@@ -150,6 +150,7 @@ export default async function PropertyPage({ params }: Props) {
       </div>
 
       <Gallery photos={l.photos.map((p) => p.storageKey)} title={l.title} icon={t.icon} />
+      {l.status === "ACTIVE" && <ViewTracker refCode={l.refCode} />}
 
       <div className="detail-layout">
         <div>

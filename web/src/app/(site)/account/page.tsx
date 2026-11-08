@@ -28,7 +28,7 @@ export default async function AccountPage({ searchParams }: Props) {
       where: { posterId: user.id, status: { not: "ARCHIVED" } },
       orderBy: { updatedAt: "desc" },
       select: {
-        refCode: true, title: true, mode: true, status: true, price: true, rejectionReason: true, moderationFlags: true,
+        id: true, refCode: true, title: true, mode: true, status: true, price: true, rejectionReason: true, moderationFlags: true,
         updatedAt: true, expiresAt: true, viewCount: true, inquiryCount: true,
         photos: { select: { storageKey: true }, orderBy: { position: "asc" }, take: 1 },
       },
@@ -37,13 +37,23 @@ export default async function AccountPage({ searchParams }: Props) {
     db.favorite.count({ where: { userId: user.id } }),
   ]);
   const staff = user.role === "MODERATOR" || user.role === "ADMIN";
+  // Views in the last 7 days per listing (Philippine dates), from the daily stats the view counter writes.
+  const weekAgo = new Date(Date.now() - 7 * 864e5);
+  const weekly = listings.length
+    ? await db.listingStatDaily.groupBy({ by: ["listingId"], where: { listingId: { in: listings.map((l) => l.id) }, date: { gte: weekAgo } }, _sum: { views: true } })
+    : [];
+  const weekViews = new Map(weekly.map((w) => [w.listingId, w._sum.views ?? 0]));
+  const totalWeekViews = weekly.reduce((n, w) => n + (w._sum.views ?? 0), 0);
 
   return (
     <>
       <div className="page-head">
         <div className="container">
           <div className="breadcrumb"><Link href="/">Home</Link> / Account</div>
-          <h1>Hi, {user.name.split(" ")[0]}</h1>
+          <div className="head-row">
+            <h1>Hi, {user.name.split(" ")[0]}</h1>
+            <Link className="btn btn-outline btn-sm" href="/account/settings">Account settings</Link>
+          </div>
           <p className="muted" style={{ margin: "4px 0 0" }}>
             {ROLE_LABEL[user.role]} · {user.phone ? formatPhMobile(user.phone) : "no phone"}
             {user.role === "AGENT" && (user.agent?.licenseVerifiedAt
@@ -55,6 +65,7 @@ export default async function AccountPage({ searchParams }: Props) {
 
       <main className="container account-page">
         {sp.denied && <div className="notice">Your account doesn&apos;t have access to that page.</div>}
+        {!user.verified && <div className="notice">Confirm your email to post listings. <Link href="/account/settings">Resend the link from Account settings</Link>.</div>}
         {sp.saved && (
           <div className={`notice ${sp.status === "ACTIVE" ? "ok" : ""}`}>
             {sp.status === "ACTIVE"
@@ -66,6 +77,7 @@ export default async function AccountPage({ searchParams }: Props) {
         <div className="stat-row">
           <Link href="/account/leads" className="stat"><strong>{newLeads}</strong><span>New inquiries</span></Link>
           <div className="stat"><strong>{listings.filter((l) => l.status === "ACTIVE").length}</strong><span>Live listings</span></div>
+          <div className="stat"><strong>{totalWeekViews.toLocaleString()}</strong><span>Listing views this week</span></div>
           <Link href="/saved" className="stat"><strong>{favCount}</strong><span>Saved listings</span></Link>
           {staff && <Link href="/admin" className="stat"><strong>→</strong><span>Moderation queue</span></Link>}
         </div>
@@ -100,8 +112,9 @@ export default async function AccountPage({ searchParams }: Props) {
                       <div className="price" style={{ fontSize: 17 }}>{peso(l.price.toNumber())}{MODES[mode].priceUnit && <small> {MODES[mode].priceUnit}</small>}</div>
                       {l.status === "REJECTED" && l.rejectionReason && <p className="flag-note bad">Moderator: {l.rejectionReason}</p>}
                       {l.status === "PENDING" && flags.length > 0 && <p className="flag-note">Under review: {flags.map((f) => f.message).join(" ")}</p>}
+                      {l.status === "EXPIRED" && <p className="flag-note">Hidden from search since it expired. Renew it to bring it back.</p>}
                       <div className="muted" style={{ fontSize: 13 }}>
-                        {l.inquiryCount} inquiries
+                        {l.viewCount.toLocaleString()} views ({(weekViews.get(l.id) ?? 0).toLocaleString()} this week) · {l.inquiryCount} inquiries
                         {l.status === "ACTIVE" && l.expiresAt && <> · expires {l.expiresAt.toISOString().slice(0, 10)}</>}
                       </div>
                       <ListingActions refCode={l.refCode} status={l.status} mode={mode} />

@@ -168,3 +168,23 @@ export function ReportListing({ refCode }: { refCode: string }) {
     </form>
   );
 }
+
+/** Counts a view once per listing per browser per day (refreshing the page doesn't inflate it). */
+export function ViewTracker({ refCode }: { refCode: string }) {
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    let seen: Record<string, string> = {};
+    try {
+      seen = JSON.parse(localStorage.getItem("pn_viewed") || "{}");
+    } catch { /* storage blocked: count anyway */ }
+    if (seen[refCode] === today) return;
+    seen[refCode] = today;
+    // Keep only today's entries so the record stays small.
+    try {
+      localStorage.setItem("pn_viewed", JSON.stringify(Object.fromEntries(Object.entries(seen).filter(([, d]) => d === today))));
+    } catch { /* ignore */ }
+    const url = `/api/listings/${encodeURIComponent(refCode)}/view`;
+    if (!navigator.sendBeacon?.(url)) void fetch(url, { method: "POST", keepalive: true });
+  }, [refCode]);
+  return null;
+}

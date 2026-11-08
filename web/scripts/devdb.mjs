@@ -40,6 +40,13 @@ const bin = findBin();
 const run = (tool, args, opts = {}) => execFileSync(join(bin, tool + exe), args, { stdio: "inherit", ...opts });
 const pgCtl = (...args) => run("pg_ctl", ["-D", DATA_DIR, ...args]);
 
+// The server process would inherit our stdout and keep it open forever (so `npm run db:start` never
+// returned when run from a script). Its output goes to server.log anyway, so don't pass ours on.
+function startServer() {
+  run("pg_ctl", ["-D", DATA_DIR, "-o", `-p ${PORT} -c listen_addresses=localhost`, "-l", join(DATA_DIR, "server.log"), "-w", "start"], { stdio: "ignore" });
+  console.log(`Dev database running on localhost:${PORT}`);
+}
+
 const cmd = process.argv[2];
 switch (cmd) {
   case "init":
@@ -48,12 +55,17 @@ switch (cmd) {
       break;
     }
     run("initdb", ["-D", DATA_DIR, "-U", USER, "--auth=trust", "-E", "UTF8", "--locale=C"]);
-    pgCtl("-o", `-p ${PORT} -c listen_addresses=localhost`, "-l", join(DATA_DIR, "server.log"), "-w", "start");
+    startServer();
     run("createdb", ["-h", "localhost", "-p", PORT, "-U", USER, DB]);
-    console.log("Dev database created and running on localhost:" + PORT);
+    console.log("Dev database created.");
     break;
   case "start":
-    pgCtl("-o", `-p ${PORT} -c listen_addresses=localhost`, "-l", join(DATA_DIR, "server.log"), "-w", "start");
+    try {
+      startServer();
+    } catch {
+      console.error(`Couldn't start the dev database. If it's already running, that's fine; otherwise see ${join(DATA_DIR, "server.log")}`);
+      process.exitCode = 1;
+    }
     break;
   case "stop":
     pgCtl("-w", "stop");

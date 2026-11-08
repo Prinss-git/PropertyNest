@@ -43,6 +43,8 @@ export type CurrentUser = {
   email: string | null;
   role: Role;
   agent: { prcLicenseNo: string | null; licenseVerifiedAt: Date | null; agencyId: string | null } | null;
+  /** Has a confirmed email or an SMS-verified phone. Required to post listings. */
+  verified: boolean;
 };
 
 /** The signed-in user, or null. Cached per request, so calling it from several components costs one query. */
@@ -54,7 +56,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     include: {
       user: {
         select: {
-          id: true, name: true, phone: true, email: true, role: true, status: true,
+          id: true, name: true, phone: true, email: true, role: true, status: true, emailVerifiedAt: true, phoneVerifiedAt: true,
           agentProfile: { select: { prcLicenseNo: true, licenseVerifiedAt: true, agencyId: true } },
         },
       },
@@ -62,7 +64,10 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   });
   if (!session || session.expiresAt < new Date() || session.user.status !== "ACTIVE") return null;
   const u = session.user;
-  return { id: u.id, name: u.name, phone: u.phone, email: u.email, role: u.role, agent: u.agentProfile };
+  return {
+    id: u.id, name: u.name, phone: u.phone, email: u.email, role: u.role, agent: u.agentProfile,
+    verified: !!(u.emailVerifiedAt || u.phoneVerifiedAt),
+  };
 });
 
 export const STAFF_ROLES: Role[] = ["MODERATOR", "ADMIN"];
@@ -88,4 +93,11 @@ export async function apiUser(roles?: Role[]): Promise<CurrentUser> {
   if (!user) throw new HttpError(401, "Please sign in first.");
   if (roles && !roles.includes(user.role)) throw new HttpError(403, "Your account can't do that.");
   return user;
+}
+
+/** Signs out every other device of this user, keeping the current session. Returns how many were ended. */
+export async function signOutOtherSessions(userId: string) {
+  const token = (await cookies()).get(COOKIE)?.value;
+  const { count } = await db.session.deleteMany({ where: { userId, ...(token ? { tokenHash: { not: sha256(token) } } : {}) } });
+  return count;
 }

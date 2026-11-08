@@ -16,7 +16,11 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
-    "worker": "node --env-file-if-exists=.env --import tsx scripts/worker.ts"
+    "worker": "node --env-file-if-exists=.env --import tsx scripts/worker.ts",
+    "test:api": "node tests/api.test.mjs",
+    "test:ui": "node tests/ui.test.mjs",
+    "test": "node tests/api.test.mjs && node tests/ui.test.mjs",
+    "maintenance": "node --env-file-if-exists=.env --import tsx scripts/maintenance.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
@@ -37,6 +41,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
+    "puppeteer-core": "^23.11.1",
     "tsx": "^4.20.3",
     "typescript": "^5"
   },
