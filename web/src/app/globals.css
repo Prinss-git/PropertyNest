@@ -59,7 +59,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .header-inner { display: flex; align-items: center; gap: 28px; height: 68px; }
 .logo { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 22px; color: var(--brand); letter-spacing: -.5px; }
-.logo svg { width: 30px; height: 30px; }
+.logo svg { width: 38px; height: 38px; flex-shrink: 0; }
 .logo span { color: var(--accent); }
 .main-nav { display: flex; gap: 4px; flex: 1; }
 .main-nav { align-items: center; }
@@ -727,3 +727,8 @@ a.stat:hover { border-color: var(--brand); }
 .devpanel-msgs p { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
 .devpanel-msg-meta { font-size: 11px; color: var(--muted); font-weight: 600; }
 .devpanel-foot { margin: 0; padding: 6px 12px 8px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); }
+
+/* Logo: the nest's weave lines take the colour of whatever is behind the logo. */
+.site-footer .logo { --logo-weave: #0b2322; }
+.logo { gap: 9px; }
+.auth-logo svg { width: 44px; height: 44px; }

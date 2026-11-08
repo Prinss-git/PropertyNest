@@ -33,7 +33,8 @@ const PATHS: Record<string, string> = {
   walk: '<circle cx="13" cy="4" r="2"/><path d="M7 21l3-7 3 3v4M6 12l3-4 4 1 2 4 3 1M10 14l1-5"/>',
   target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
   map: '<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',
-  logo: '<path d="M4 13l12-9 12 9" stroke-width="3"/><path d="M8 11v14h16V11" stroke-width="3"/><circle cx="16" cy="18" r="3.2" fill="#ff6b4a" stroke="none"/>',
+  // Roof over a nest with an egg tucked in: home, safety, new beginnings. Drawn on a 48 grid.
+  logo: '<path d="M9 18.5 24 6.5l15 12" stroke-width="4.2"/><ellipse cx="24" cy="23" rx="5.2" ry="6.6" fill="#ff6b4a" stroke="none"/><path d="M7 25.5h34c-1.4 9.8-8.3 16-17 16s-15.6-6.2-17-16z" fill="currentColor" stroke="none"/><path d="M3.8 23.2 9 26.6M44.2 23.2 39 26.6" stroke-width="2.6"/><path d="M11.5 30.5 30 37M36.5 30.5 18 37" stroke="var(--logo-weave, #fff)" stroke-width="1.8" opacity=".38"/>',
 };
 
 export type IconName = keyof typeof PATHS;
@@ -43,7 +44,7 @@ export function Icon({ name, size = 18, strokeWidth = 1.8 }: { name: IconName | 
     <svg
       width={size}
       height={size}
-      viewBox={name === "logo" ? "0 0 32 32" : "0 0 24 24"}
+      viewBox={name === "logo" ? "0 0 48 48" : "0 0 24 24"}
       fill="none"
       stroke="currentColor"
       strokeWidth={strokeWidth}
