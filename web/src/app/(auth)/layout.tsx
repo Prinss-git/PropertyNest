@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { DevPanel } from "@/components/DevPanel";
+import { devToolsEnabled } from "@/lib/devTools";
 
 export const metadata: Metadata = { robots: { index: false } };
 
@@ -13,6 +15,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <Link href="/privacy">Privacy policy</Link>
         <Link href="/cookies">Cookie policy</Link>
       </footer>
+      {devToolsEnabled() && <DevPanel />}
     </div>
   );
 }
