@@ -18,6 +18,7 @@ export function checkEnv(env: NodeJS.ProcessEnv = process.env): EnvReport {
   // Secrets: required and long enough to be unguessable.
   if (!env.OTP_SECRET || env.OTP_SECRET.length < 32) errors.push("OTP_SECRET must be at least 32 random characters (it protects SMS login codes).");
   if (!env.IP_HASH_SALT || env.IP_HASH_SALT.length < 16) errors.push("IP_HASH_SALT must be at least 16 random characters (it keeps visitor IPs private).");
+  if (env.DEV_TOOLS === "1") errors.push("DEV_TOOLS=1 turns on the developer panel, which lets anyone log in as any account. Remove it.");
   if (env.OTP_DEV_ECHO === "1") errors.push("OTP_DEV_ECHO=1 shows login codes on screen. Remove it: anyone could log in as anyone.");
 
   // Messages must really go out.
