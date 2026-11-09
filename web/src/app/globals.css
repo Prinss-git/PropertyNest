@@ -749,3 +749,7 @@ a.stat:hover { border-color: var(--brand); }
 .devpanel-guide div { display: flex; flex-wrap: wrap; gap: 6px; }
 .devpanel-guide a { background: #fff; border: 1px solid #c7d2fe; border-radius: 999px; padding: 4px 10px; font-weight: 600; font-size: 12px; color: #312e81; text-decoration: none; }
 .devpanel-guide a:hover { background: #eef2ff; }
+/* Pager under admin tables: count on the left, page links on the right. */
+.table-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
+.table-pager .pagination { margin-top: 0; }
+.pagination-gap { min-width: 24px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
