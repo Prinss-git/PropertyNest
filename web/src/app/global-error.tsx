@@ -8,7 +8,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
         <div style={{ maxWidth: 420, textAlign: "center" }}>
           <h1 style={{ fontSize: 22 }}>PropertyNest is having trouble</h1>
           <p>Please try again in a minute.</p>
-          <button type="button" onClick={reset} style={{ padding: "10px 20px", borderRadius: 999, border: 0, background: "#0f5e5a", color: "#fff", fontWeight: 600, cursor: "pointer" }}>Try again</button>
+          <button type="button" onClick={reset} style={{ padding: "10px 20px", borderRadius: 999, border: 0, background: "#1b2a4a", color: "#fff", fontWeight: 600, cursor: "pointer" }}>Try again</button>
           {error.digest && <p style={{ fontSize: 12, color: "#5f6b6d" }}>Error reference: {error.digest}</p>}
         </div>
       </body>

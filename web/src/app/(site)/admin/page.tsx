@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AgentVerifyActions, ReviewActions } from "@/components/admin/ModerationActions";
@@ -16,7 +17,7 @@ export const metadata: Metadata = { title: "Moderation", robots: { index: false 
 const TABS = [["queue", "Review queue"], ["reports", "Reports"], ["agents", "Agent licenses"], ["support", "Support"], ["users", "Users"], ["activity", "Activity log"], ["outbox", "Messages sent"], ["jobs", "Jobs"]] as const;
 type Tab = (typeof TABS)[number][0];
 
-type Params = { tab?: string; q?: string; status?: string; action?: string };
+type Params = { tab?: string; q?: string; status?: string; action?: string; page?: string };
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<Params> }) {
   await requireUser({ roles: STAFF_ROLES, next: "/admin" });
@@ -53,7 +54,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         {tab === "agents" && <Agents />}
         {tab === "outbox" && <Outbox />}
         {tab === "support" && <Support status={sp.status} />}
-        {tab === "users" && <Users q={sp.q} status={sp.status} />}
+        {tab === "users" && <Users q={sp.q} status={sp.status} page={sp.page} />}
         {tab === "activity" && <Activity action={sp.action} />}
         {tab === "jobs" && <Jobs />}
       </main>
@@ -236,12 +237,23 @@ async function Jobs() {
 
 const ROLE_NAMES: Record<string, string> = { SEEKER: "Seeker", OWNER: "Owner", AGENT: "Agent", AGENCY_ADMIN: "Agency admin", MODERATOR: "Moderator", ADMIN: "Admin" };
 
-async function Users({ q, status }: { q?: string; status?: string }) {
+const USERS_PER_PAGE = 10;
+
+// Page numbers to show: always the first and last, plus two either side of the current one; gaps become "…".
+function pageList(page: number, pages: number): (number | "…")[] {
+  const out: (number | "…")[] = [];
+  for (let p = 1; p <= pages; p++) {
+    if (p === 1 || p === pages || Math.abs(p - page) <= 2) out.push(p);
+    else if (out[out.length - 1] !== "…") out.push("…");
+  }
+  return out;
+}
+
+async function Users({ q, status, page: pageParam }: { q?: string; status?: string; page?: string }) {
   const term = q?.trim();
   const statusFilter = status === "SUSPENDED" ? "SUSPENDED" : undefined;
   const digits = term?.replace(/\D/g, "") ?? "";
-  const users = await db.user.findMany({
-    where: {
+  const where: Prisma.UserWhereInput = {
       status: statusFilter ?? { not: "DELETED" },
       ...(term
         ? {
@@ -254,14 +266,29 @@ async function Users({ q, status }: { q?: string; status?: string }) {
             ],
           }
         : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: 50,
+  };
+  const total = await db.user.count({ where });
+  const pages = Math.max(1, Math.ceil(total / USERS_PER_PAGE));
+  // Out-of-range or junk page numbers land on the nearest real page.
+  const page = Math.min(pages, Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1));
+  const users = await db.user.findMany({
+    where,
+    // id breaks ties so rows never repeat or go missing between pages.
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    skip: (page - 1) * USERS_PER_PAGE,
+    take: USERS_PER_PAGE,
     select: {
       id: true, name: true, email: true, phone: true, role: true, status: true, createdAt: true, lastLoginAt: true,
       _count: { select: { postedListings: true, reportsFiled: true } },
     },
   });
+  const pageHref = (p: number) => {
+    const qs = new URLSearchParams({ tab: "users" });
+    if (term) qs.set("q", term);
+    if (statusFilter) qs.set("status", statusFilter);
+    if (p > 1) qs.set("page", String(p));
+    return `/admin?${qs}`;
+  };
   return (
     <>
       <form className="admin-search" action="/admin">
@@ -290,6 +317,22 @@ async function Users({ q, status }: { q?: string; status?: string }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {total > 0 && (
+        <div className="table-pager">
+          <span className="muted">
+            Showing {(page - 1) * USERS_PER_PAGE + 1}–{Math.min(page * USERS_PER_PAGE, total)} of {total.toLocaleString()} {total === 1 ? "user" : "users"}
+          </span>
+          {pages > 1 && (
+            <nav className="pagination" aria-label="User pages">
+              {page > 1 && <Link href={pageHref(page - 1)} aria-label="Previous page">‹</Link>}
+              {pageList(page, pages).map((p, i) => p === "…"
+                ? <span key={`gap${i}`} className="pagination-gap">…</span>
+                : <Link key={p} href={pageHref(p)} className={p === page ? "active" : ""} aria-current={p === page ? "page" : undefined}>{p}</Link>)}
+              {page < pages && <Link href={pageHref(page + 1)} aria-label="Next page">›</Link>}
+            </nav>
+          )}
         </div>
       )}
     </>

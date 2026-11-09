@@ -4,18 +4,17 @@ import { HeroSearch } from "@/components/home/HeroSearch";
 import { LoanCalculator } from "@/components/home/LoanCalculator";
 import { Icon } from "@/components/Icon";
 import { ListingGrid } from "@/components/ListingCard";
-import { db } from "@/lib/db";
-import { getHomeData } from "@/lib/listings";
+import { getHomeData, getLocationOptions } from "@/lib/listings";
 
 // Rebuilt at most once a minute; every visitor in between gets the cached page.
 export const revalidate = 60;
 
 const MODE_CARDS = [
-  { mode: "buy", icon: "key", color: "var(--buy)", title: "Buy", text: "Own a home, condo, or lot. See total prices, title status, and financing options.",
+  { mode: "buy", icon: "modeBuy", title: "Buy", text: "Own a home, condo, or lot. See total prices, title status, and financing options.",
     points: ["Clean title & RFO filters", "Bank, Pag-IBIG & in-house financing", "Built-in loan calculator"] },
-  { mode: "rent", icon: "house", color: "var(--rent)", title: "Rent", text: "Monthly rentals for condos, apartments, and houses, from short stays to yearly contracts.",
+  { mode: "rent", icon: "modeRent", title: "Rent", text: "Monthly rentals for condos, apartments, and houses, from short stays to yearly contracts.",
     points: ["Monthly rates with deposit & advance shown", "Furnished / pet-friendly filters", "6–12 month minimum stays"] },
-  { mode: "lease", icon: "office", color: "var(--lease)", title: "Lease", text: "Long-term leases for businesses and families: offices, retail, warehouses, and homes.",
+  { mode: "lease", icon: "modeLease", title: "Lease", text: "Long-term leases for businesses and families: offices, retail, warehouses, and homes.",
     points: ["Lease term & annual escalation shown", "CUSA and fit-out details", "PEZA-accredited spaces"] },
 ];
 
@@ -32,7 +31,7 @@ const CITY_PHOTOS: Record<string, string> = {
 export default async function HomePage() {
   const [data, locs] = await Promise.all([
     getHomeData(),
-    db.location.findMany({ where: { level: { in: ["CITY", "PROVINCE", "REGION"] } }, select: { name: true }, orderBy: { name: "asc" } }),
+    getLocationOptions(),
   ]);
 
   return (
@@ -41,7 +40,7 @@ export default async function HomePage() {
         <div className="container">
           <h1>Find your next place.<br />Buy, rent, or lease.</h1>
           <p className="lead">Homes, condos, offices, retail spaces, and warehouses from verified agents and owners across the Philippines.</p>
-          <HeroSearch locations={locs.map((l) => l.name)} />
+          <HeroSearch locations={locs} />
           <div className="hero-stats">
             <div><strong>{data.counts.buy ?? 0}</strong><span>Properties for sale</span></div>
             <div><strong>{data.counts.rent ?? 0}</strong><span>Homes for rent</span></div>
@@ -62,10 +61,10 @@ export default async function HomePage() {
           <div className="mode-grid">
             {MODE_CARDS.map((c) => (
               <div key={c.mode} className="mode-card">
-                <div className="mode-icon" style={{ background: c.color }}><Icon name={c.icon} size={24} /></div>
+                <div className={`mode-icon m-${c.mode}`}><Icon name={c.icon} size={32} strokeWidth={1.7} /></div>
                 <h3>{c.title}</h3>
                 <p>{c.text}</p>
-                <ul>{c.points.map((p) => <li key={p}>{p}</li>)}</ul>
+                <ul>{c.points.map((p) => <li key={p}><Icon name="check" size={16} strokeWidth={2.2} />{p}</li>)}</ul>
                 <Link className="link-more" href={`/listings?mode=${c.mode}`}>Browse {c.title.toLowerCase()} listings →</Link>
               </div>
             ))}

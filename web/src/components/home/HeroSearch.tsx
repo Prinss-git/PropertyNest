@@ -2,6 +2,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MODES, MODE_KEYS, MODE_TYPES, PRICE_PRESETS, TYPES, type Mode } from "@/lib/catalog";
+import type { LocationOption } from "@/lib/listings";
+import { LocationCombobox } from "../LocationCombobox";
 
 const HINTS: Record<Mode, React.ReactNode> = {
   buy: <><strong>Buy:</strong> prices are the total selling price. Filter by title status and financing options.</>,
@@ -9,7 +11,7 @@ const HINTS: Record<Mode, React.ReactNode> = {
   lease: <><strong>Lease:</strong> long-term contracts (1–5+ years) for offices, retail, warehouses, and homes.</>,
 };
 
-export function HeroSearch({ locations }: { locations: string[] }) {
+export function HeroSearch({ locations }: { locations: LocationOption[] }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("buy");
   const [q, setQ] = useState("");
@@ -52,8 +54,7 @@ export function HeroSearch({ locations }: { locations: string[] }) {
       <div className="search-fields">
         <div className="field">
           <label htmlFor="q">Location</label>
-          <input className="input" id="q" list="loc-list" placeholder="City, area, or landmark (e.g. BGC, Makati)" value={q} onChange={(e) => setQ(e.target.value)} />
-          <datalist id="loc-list">{locations.map((o) => <option key={o} value={o} />)}</datalist>
+          <LocationCombobox id="q" value={q} onChange={setQ} options={locations} placeholder="City, area, or landmark (e.g. BGC, Makati)" />
         </div>
         <div className="field">
           <label htmlFor="type">Property type</label>

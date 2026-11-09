@@ -1,4 +1,4 @@
-// Stroke icons ported from the prototype. Paths are static strings, never user input.
+// Stroke icons. Paths are static strings, never user input.
 const PATHS: Record<string, string> = {
   house: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
   building: '<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10 21v-3h4v3"/>',
@@ -30,10 +30,17 @@ const PATHS: Record<string, string> = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
   chevron: '<path d="M6 9l6 6 6-6"/>',
+  // Homepage mode icons (two-tone): Buy = house with an ownership check, Rent = monthly calendar with a home,
+  // Lease = office building with a signed contract.
+  modeBuy: '<path d="M4.5 10.2V19a1 1 0 0 0 1 1h9" fill="currentColor" fill-opacity=".14" stroke="none"/><path d="M4.5 10.2v8.8a1 1 0 0 0 1 1h8.5M18.5 10.2v3.3"/><path d="M2.8 11.5 11.5 4.3l8.7 7.2"/><path d="M9.3 20v-5.3h4.4V16"/><circle cx="18.2" cy="18.2" r="3.9" fill="var(--icon-bg, #fff)"/><path d="m16.5 18.3 1.2 1.2 2.3-2.5"/>',
+  modeRent: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="currentColor" fill-opacity=".14"/><path d="M3.5 9.8h17M8 3v4M16 3v4"/><path d="M8.8 17.8v-3.1l3.2-2.6 3.2 2.6v3.1z" fill="var(--icon-bg, #fff)"/>',
+  modeLease: '<path d="M4 20.5V5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 14 5v4.5" fill="currentColor" fill-opacity=".14"/><path d="M2.8 20.5h8.7M7 7.5h1M10 7.5h1M7 10.5h1M7 13.5h1"/><rect x="11.8" y="11" width="9" height="10" rx="1.6" fill="var(--icon-bg, #fff)"/><path d="M14.3 14.2h4M14.3 16.6h4M14.3 19c.7-.8 1.3-.8 1.9 0 .5.6 1 .6 1.8-.2"/>',
   walk: '<circle cx="13" cy="4" r="2"/><path d="M7 21l3-7 3 3v4M6 12l3-4 4 1 2 4 3 1M10 14l1-5"/>',
   target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
   map: '<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',
-  logo: '<path d="M4 13l12-9 12 9" stroke-width="3"/><path d="M8 11v14h16V11" stroke-width="3"/><circle cx="16" cy="18" r="3.2" fill="#ff6b4a" stroke="none"/>',
+  // "Soft nest": an arched roof sheltering a woven nest with two eggs. Drawn on a 64 grid; colours come from
+  // --logo-main / --logo-egg1 / --logo-egg2 / --logo-weave (see .logo in globals.css).
+  logo: '<path d="M9 31C15 19 23 12 32 9c9 3 17 10 23 22" stroke="var(--logo-main, currentColor)" stroke-width="5"/><ellipse cx="27" cy="33" rx="5" ry="6.2" fill="var(--logo-egg1, #c39a4e)" stroke="none"/><ellipse cx="37.5" cy="34" rx="4.4" ry="5.4" fill="var(--logo-egg2, #ecdcb6)" stroke="none"/><path d="M10 37h44c-1.6 10.5-10 17-22 17S11.6 47.5 10 37z" fill="var(--logo-main, currentColor)" stroke="none"/><path d="M16 42.5c6 2.2 12 2.2 16 0s10-2.2 16 0M20 48.5c4 1.4 8 1.4 12 0s8-1.4 12 0" stroke="var(--logo-weave, #d6b36e)" stroke-width="1.8" opacity=".75"/>',
 };
 
 export type IconName = keyof typeof PATHS;
@@ -43,7 +50,7 @@ export function Icon({ name, size = 18, strokeWidth = 1.8 }: { name: IconName | 
     <svg
       width={size}
       height={size}
-      viewBox={name === "logo" ? "0 0 32 32" : "0 0 24 24"}
+      viewBox={name === "logo" ? "0 0 64 64" : "0 0 24 24"}
       fill="none"
       stroke="currentColor"
       strokeWidth={strokeWidth}
