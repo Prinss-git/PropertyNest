@@ -242,6 +242,44 @@ export async function getSimilar(l: ListingDetail) {
 }
 
 /** Cities (with known areas) for the listing form. */
+// ───────────────────────── Location suggestions (search box) ─────────────────────────
+
+export type LocationOption = { value: string; label: string; hint: string; kind: "region" | "province" | "city" | "area"; count: number };
+
+/** Places that have live listings, with how many: cities and their provinces/regions, plus named areas (BGC…). */
+export async function getLocationOptions(): Promise<LocationOption[]> {
+  const live = { status: "ACTIVE" } as const;
+  const [byCity, byArea] = await Promise.all([
+    db.listing.groupBy({ by: ["cityId"], where: live, _count: true }),
+    db.listing.groupBy({ by: ["areaId"], where: { ...live, areaId: { not: null } }, _count: true }),
+  ]);
+  const areaIds = byArea.flatMap((a) => (a.areaId ? [a.areaId] : []));
+  const locs = await db.location.findMany({
+    where: { OR: [{ level: { in: ["REGION", "PROVINCE", "CITY"] } }, { id: { in: areaIds } }] },
+    select: { id: true, name: true, level: true, parentId: true },
+  });
+  const byId = new Map(locs.map((l) => [l.id, l]));
+
+  // A city's listings also count for its province and region.
+  const counts = new Map<string, number>();
+  for (const c of byCity) {
+    for (let id: string | null | undefined = c.cityId; id; id = byId.get(id)?.parentId) counts.set(id, (counts.get(id) ?? 0) + c._count);
+  }
+  for (const a of byArea) if (a.areaId) counts.set(a.areaId, a._count);
+
+  const parentName = (id: string | null) => (id ? byId.get(id)?.name ?? "" : "");
+  const out: LocationOption[] = [];
+  for (const l of locs) {
+    const count = counts.get(l.id) ?? 0;
+    if (!count) continue;
+    if (l.level === "CITY") out.push({ value: l.name, label: l.name, hint: parentName(l.parentId) || "City", kind: "city", count });
+    else if (l.level === "AREA") out.push({ value: l.name, label: l.name, hint: parentName(l.parentId), kind: "area", count });
+    else if (l.level === "PROVINCE") out.push({ value: l.name, label: l.name, hint: "Province", kind: "province", count });
+    else out.push({ value: l.name, label: l.name, hint: "Region", kind: "region", count });
+  }
+  return out;
+}
+
 export async function getCityOptions() {
   const cities = await db.location.findMany({
     where: { level: "CITY" },

@@ -4,8 +4,7 @@ import { HeroSearch } from "@/components/home/HeroSearch";
 import { LoanCalculator } from "@/components/home/LoanCalculator";
 import { Icon } from "@/components/Icon";
 import { ListingGrid } from "@/components/ListingCard";
-import { db } from "@/lib/db";
-import { getHomeData } from "@/lib/listings";
+import { getHomeData, getLocationOptions } from "@/lib/listings";
 
 // Rebuilt at most once a minute; every visitor in between gets the cached page.
 export const revalidate = 60;
@@ -32,7 +31,7 @@ const CITY_PHOTOS: Record<string, string> = {
 export default async function HomePage() {
   const [data, locs] = await Promise.all([
     getHomeData(),
-    db.location.findMany({ where: { level: { in: ["CITY", "PROVINCE", "REGION"] } }, select: { name: true }, orderBy: { name: "asc" } }),
+    getLocationOptions(),
   ]);
 
   return (
@@ -41,7 +40,7 @@ export default async function HomePage() {
         <div className="container">
           <h1>Find your next place.<br />Buy, rent, or lease.</h1>
           <p className="lead">Homes, condos, offices, retail spaces, and warehouses from verified agents and owners across the Philippines.</p>
-          <HeroSearch locations={locs.map((l) => l.name)} />
+          <HeroSearch locations={locs} />
           <div className="hero-stats">
             <div><strong>{data.counts.buy ?? 0}</strong><span>Properties for sale</span></div>
             <div><strong>{data.counts.rent ?? 0}</strong><span>Homes for rent</span></div>

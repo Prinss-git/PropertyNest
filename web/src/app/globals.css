@@ -117,13 +117,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .menu-toggle { display: none; }
 
 /* ---------- Hero ---------- */
+/* Hero photo in three sizes: phones get 1280 px, laptops 1920 px, large or high-density screens the 4K one. */
 .hero {
+  --hero-img: url("/img/hero-1280.webp");
   position: relative; color: #fff; padding: 88px 0 110px;
   background:
-    linear-gradient(180deg, rgba(10, 16, 34, .55), rgba(10, 16, 34, .78)),
-    url("/img/1600596542815-ffad4c1539a9.jpg") center/cover no-repeat,
+    linear-gradient(180deg, rgba(10, 16, 34, .5), rgba(10, 16, 34, .76)),
+    var(--hero-img) center/cover no-repeat,
     var(--brand-dark);
 }
+@media (min-width: 700px) { .hero { --hero-img: url("/img/hero-1920.webp"); } }
+@media (min-width: 1700px), (min-width: 900px) and (min-resolution: 1.5dppx) { .hero { --hero-img: url("/img/hero-3840.webp"); } }
 .hero h1 { font-size: clamp(30px, 5vw, 50px); line-height: 1.1; margin: 0 0 12px; letter-spacing: -1px; }
 .hero p.lead { font-size: 18px; margin: 0 0 32px; opacity: .92; max-width: 620px; }
 
@@ -763,3 +767,25 @@ a.stat:hover { border-color: var(--brand); }
 .table-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
 .table-pager .pagination { margin-top: 0; }
 .pagination-gap { min-width: 24px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
+
+/* ---------- Location combobox (type-to-search with suggestions) ---------- */
+.combo { position: relative; }
+.combo-input { padding-right: 38px; }
+.combo-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.combo-clear:hover { background: var(--bg-soft); color: var(--text); }
+.combo-list {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 70; width: max(100%, 340px); max-width: calc(100vw - 32px);
+  margin: 0; padding: 6px; list-style: none; background: #fff; color: var(--text); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: var(--shadow-lg); max-height: 360px; overflow-y: auto;
+}
+.combo-head { padding: 8px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); }
+.combo-opt { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
+.combo-opt.on { background: var(--brand-light); }
+.combo-ico { width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--bg-soft); color: var(--brand); display: flex; align-items: center; justify-content: center; }
+.combo-opt.on .combo-ico { background: #fff; }
+.combo-text { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+.combo-label { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.combo-label mark { background: none; color: var(--brand); font-weight: 800; text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.combo-hint { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.combo-count { flex-shrink: 0; font-size: 12px; color: var(--muted); }
+.combo-empty { padding: 12px 10px; font-size: 14px; color: var(--muted); }
