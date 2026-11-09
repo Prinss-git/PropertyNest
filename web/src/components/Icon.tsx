@@ -38,8 +38,9 @@ const PATHS: Record<string, string> = {
   walk: '<circle cx="13" cy="4" r="2"/><path d="M7 21l3-7 3 3v4M6 12l3-4 4 1 2 4 3 1M10 14l1-5"/>',
   target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
   map: '<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',
-  // Roof over a nest with an egg tucked in: home, safety, new beginnings. Drawn on a 48 grid.
-  logo: '<path d="M9 18.5 24 6.5l15 12" stroke-width="4.2"/><ellipse cx="24" cy="23" rx="5.2" ry="6.6" fill="#ff6b4a" stroke="none"/><path d="M7 25.5h34c-1.4 9.8-8.3 16-17 16s-15.6-6.2-17-16z" fill="currentColor" stroke="none"/><path d="M3.8 23.2 9 26.6M44.2 23.2 39 26.6" stroke-width="2.6"/><path d="M11.5 30.5 30 37M36.5 30.5 18 37" stroke="var(--logo-weave, #fff)" stroke-width="1.8" opacity=".38"/>',
+  // "Soft nest": an arched roof sheltering a woven nest with two eggs. Drawn on a 64 grid; colours come from
+  // --logo-main / --logo-egg1 / --logo-egg2 / --logo-weave (see .logo in globals.css).
+  logo: '<path d="M9 31C15 19 23 12 32 9c9 3 17 10 23 22" stroke="var(--logo-main, currentColor)" stroke-width="5"/><ellipse cx="27" cy="33" rx="5" ry="6.2" fill="var(--logo-egg1, #c39a4e)" stroke="none"/><ellipse cx="37.5" cy="34" rx="4.4" ry="5.4" fill="var(--logo-egg2, #ecdcb6)" stroke="none"/><path d="M10 37h44c-1.6 10.5-10 17-22 17S11.6 47.5 10 37z" fill="var(--logo-main, currentColor)" stroke="none"/><path d="M16 42.5c6 2.2 12 2.2 16 0s10-2.2 16 0M20 48.5c4 1.4 8 1.4 12 0s8-1.4 12 0" stroke="var(--logo-weave, #d6b36e)" stroke-width="1.8" opacity=".75"/>',
 };
 
 export type IconName = keyof typeof PATHS;
@@ -49,7 +50,7 @@ export function Icon({ name, size = 18, strokeWidth = 1.8 }: { name: IconName | 
     <svg
       width={size}
       height={size}
-      viewBox={name === "logo" ? "0 0 48 48" : "0 0 24 24"}
+      viewBox={name === "logo" ? "0 0 64 64" : "0 0 24 24"}
       fill="none"
       stroke="currentColor"
       strokeWidth={strokeWidth}

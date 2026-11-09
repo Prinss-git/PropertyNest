@@ -51,7 +51,7 @@ export function LocationPicker({ value, onChange, cityCenter, exact, onExact }: 
       return;
     }
     if (!r.marker) {
-      r.marker = r.L.marker([p.lat, p.lng], { draggable: true, icon: pinIcon(r.L, { color: "#0f5e5a", icon: "home", size: 40 }) }).addTo(r.map);
+      r.marker = r.L.marker([p.lat, p.lng], { draggable: true, icon: pinIcon(r.L, { color: "#1b2a4a", icon: "home", size: 40 }) }).addTo(r.map);
       r.marker.on("dragend", () => {
         const ll = r.marker!.getLatLng();
         onChangeRef.current({ lat: +ll.lat.toFixed(6), lng: +ll.lng.toFixed(6) });

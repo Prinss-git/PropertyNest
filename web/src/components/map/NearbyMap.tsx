@@ -51,9 +51,9 @@ export function NearbyMap({ refCode, point, address }: { refCode: string; point:
       addBaseLayer(L, map);
       L.circle([point.lat, point.lng], { radius: 1000, color: "#3b6fd8", weight: 1.5, fillColor: "#3b6fd8", fillOpacity: 0.08, interactive: false }).addTo(map);
       if (point.exact) {
-        L.marker([point.lat, point.lng], { icon: pinIcon(L, { color: "#0f5e5a", icon: "home", size: 40 }), zIndexOffset: 1000 }).addTo(map).bindTooltip("This property");
+        L.marker([point.lat, point.lng], { icon: pinIcon(L, { color: "#1b2a4a", icon: "home", size: 40 }), zIndexOffset: 1000 }).addTo(map).bindTooltip("This property");
       } else {
-        L.circle([point.lat, point.lng], { radius: APPROX_RADIUS_M, color: "#0f5e5a", weight: 2, dashArray: "6 6", fillColor: "#0f5e5a", fillOpacity: 0.18 })
+        L.circle([point.lat, point.lng], { radius: APPROX_RADIUS_M, color: "#1b2a4a", weight: 2, dashArray: "6 6", fillColor: "#1b2a4a", fillOpacity: 0.18 })
           .addTo(map).bindTooltip("Approximate location");
       }
       const layer = L.layerGroup().addTo(map);
