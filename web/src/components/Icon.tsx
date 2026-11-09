@@ -1,4 +1,4 @@
-// Stroke icons ported from the prototype. Paths are static strings, never user input.
+// Stroke icons. Paths are static strings, never user input.
 const PATHS: Record<string, string> = {
   house: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
   building: '<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10 21v-3h4v3"/>',
