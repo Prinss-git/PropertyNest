@@ -70,8 +70,8 @@ export function SiteFooter() {
         </div>
         <div className="footer-bottom">
           <span>
-            © {new Date().getFullYear()} PropertyNest.
-            {/* Shown in development and on staging sites that use sample data (DEMO_MODE=1). */}
+            © {new Date().getFullYear()} PropertyNest. All rights reserved.
+            {/* Only on local test sites and on staging sites that use sample data (DEMO_MODE=1); never on the live site. */}
             {(process.env.DEMO_MODE === "1" || !(process.env.SITE_URL ?? "").startsWith("https://")) && " Sample listings for demonstration only."}
           </span>
           <span className="footer-links">
