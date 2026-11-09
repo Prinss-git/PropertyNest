@@ -63,8 +63,16 @@ export function HeaderNav({ counts }: { counts: Record<string, number> }) {
   const savedPage = pathname === "/saved";
   const favCount = useFavorites().length;
   const [mobileOpen, setMobileOpen] = useState(false);
+  // The one menu that is open. Hover, the arrow button and keyboard focus all set this, so only one menu can
+  // ever show at a time.
   const [openMenu, setOpenMenu] = useState<Mode | null>(null);
   const navRef = useRef<HTMLElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastPointer = useRef("");
+  const cancelClose = () => { if (closeTimer.current) clearTimeout(closeTimer.current); closeTimer.current = null; };
+  // A short delay before closing, so a mouse that slips off the edge on its way into the menu doesn't shut it.
+  const closeSoon = () => { cancelClose(); closeTimer.current = setTimeout(() => setOpenMenu(null), 150); };
+  useEffect(() => cancelClose, []);
 
   // Close menus on navigation, outside click, or Escape.
   useEffect(() => {
@@ -89,18 +97,37 @@ export function HeaderNav({ counts }: { counts: Record<string, number> }) {
       <Link href="/" className="logo">
         <Icon name="logo" size={30} /> <b style={{ fontWeight: "inherit" }}>Property<span>Nest</span></b>
       </Link>
-      <nav className={`main-nav ${mobileOpen ? "open" : ""}`} ref={navRef}>
+      <nav
+        className={`main-nav ${mobileOpen ? "open" : ""}`}
+        ref={navRef}
+        // Focus moving out of the menus (Tab past them) closes them.
+        onBlur={(e) => { if (!navRef.current?.contains(e.relatedTarget as Node | null)) setOpenMenu(null); }}
+      >
         {MODE_KEYS.map((m) => (
-          <div key={m} className={`nav-item ${openMenu === m ? "open" : ""}`}>
+          <div
+            key={m}
+            className={`nav-item ${openMenu === m ? "open" : ""}`}
+            // Hover opens a menu only for a real mouse; on touch screens the arrow button toggles it.
+            onPointerEnter={(e) => { if (e.pointerType === "mouse") { cancelClose(); setOpenMenu(m); } }}
+            onPointerLeave={(e) => { if (e.pointerType === "mouse") closeSoon(); }}
+            // Keyboard focus (Tab) opens the menu; a mouse click's focus doesn't, or it would undo the arrow's toggle.
+            onFocus={(e) => { if ((e.target as HTMLElement).matches(":focus-visible")) { cancelClose(); setOpenMenu(m); } }}
+          >
             <Link href={`/listings?mode=${m}`} className={`nav-link ${activeMode === m ? "active" : ""}`}>{MODES[m].label}</Link>
             <button
               type="button"
               className="nav-caret"
               aria-expanded={openMenu === m}
               aria-label={`Show ${MODES[m].label} options`}
+              onPointerDown={(e) => { lastPointer.current = e.pointerType; }}
               onClick={(e) => {
                 e.stopPropagation();
-                setOpenMenu(openMenu === m ? null : m);
+                cancelClose();
+                // With a mouse the menu is already open from hovering, so a click keeps it open; touch and the
+                // keyboard (Enter/Space) toggle it.
+                if (lastPointer.current === "mouse") setOpenMenu(m);
+                else setOpenMenu(openMenu === m ? null : m);
+                lastPointer.current = "";
               }}
             >
               <Icon name="chevron" size={12} strokeWidth={2.5} />
