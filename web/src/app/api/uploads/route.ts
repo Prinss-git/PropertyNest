@@ -26,7 +26,7 @@ export const POST = handle(async (req: Request) => {
   if (file.size > MAX_BYTES) throw new HttpError(413, "That photo is over 12 MB. Choose a smaller one.");
 
   const input = Buffer.from(await file.arrayBuffer());
-  let meta: sharp.Metadata;
+  let meta: Awaited<ReturnType<ReturnType<typeof sharp>["metadata"]>>;
   try {
     meta = await sharp(input).metadata();
   } catch {

@@ -1,7 +1,12 @@
 "use client";
+import * as Sentry from "@sentry/nextjs";
+import { useEffect } from "react";
 
 // Last resort, when even the site layout fails. Must render its own <html> and avoid the stylesheet.
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
   return (
     <html lang="en">
       <body style={{ fontFamily: "system-ui, sans-serif", background: "#f6f8f8", color: "#1c2526", display: "grid", placeItems: "center", minHeight: "100vh", margin: 0, padding: 16 }}>

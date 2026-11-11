@@ -57,6 +57,9 @@ Every setting is listed and explained in [`.env.example`](.env.example). For a l
 | `NEARBY_PROVIDER`, `GEOAPIFY_API_KEY` | `geoapify`, your key |
 | `CLIENT_IP_HEADER` | `x-forwarded-for` (default), or `cf-connecting-ip` only if the host accepts traffic from Cloudflare alone |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional |
+| `NEXT_PUBLIC_SENTRY_DSN` | Error alerts: the DSN from your Sentry project (recommended) |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | Optional: readable error traces (source maps) |
+| `NEXT_PUBLIC_CF_ANALYTICS_TOKEN` | Visitor statistics: the token from Cloudflare Web Analytics |
 
 The web app and the worker **refuse to start** on an https `SITE_URL` if something required is missing or
 unsafe (for example on-screen login codes still turned on), and print exactly what to fix.
@@ -103,6 +106,9 @@ It prints a one-time password. Log in, then change it under **Account settings**
 
 ## 6. Check after going live
 
+Before pointing the real domain at it, run the load test against the deployed copy (from your own computer):
+`npm run loadtest -- https://<the host's address>`. It only reads pages. Every row should say "ok".
+
 - [ ] `https://propertynest.ph/api/health` shows `"status":"ok"`.
 - [ ] Sign up with a real mobile number: the SMS code arrives.
 - [ ] Sign up with email: the confirmation email arrives (check spam too) and the link works.
@@ -111,12 +117,21 @@ It prints a one-time password. Log in, then change it under **Account settings**
 - [ ] Send an inquiry from another phone: the poster gets an SMS and an email.
 - [ ] **Moderation → Jobs** shows scheduled maintenance ran in the last 10 minutes and no failed jobs.
 - [ ] The Contact page message arrives at `SUPPORT_EMAIL`.
+- [ ] Sentry shows the site as connected: in the Sentry project, use **Verify installation**, or open a page that
+      crashes on purpose if you add one; the error should appear within a minute.
+- [ ] Cloudflare Web Analytics shows your own visit within a few minutes.
 
 ## 7. Keeping it running
 
 - **Backups**: turn on point-in-time recovery on the database (Neon and Supabase include it on paid plans).
   Once a month, restore a backup into a temporary database and check it opens: an untested backup is a guess.
 - **Uptime alerts**: point a free monitor (UptimeRobot, Better Stack) at `/api/health`, alerting by SMS or email.
+- **Error alerts (Sentry)**: create a free account at sentry.io → new project → platform **Next.js** → copy the DSN into
+  `NEXT_PUBLIC_SENTRY_DSN` and redeploy. In the project's **Alerts**, keep "new issue" emails on. Errors on pages, API
+  calls, visitors' browsers and background jobs that give up all arrive there, without visitors' IPs or cookies.
+- **Visitor statistics (Cloudflare Web Analytics)**: Cloudflare dashboard → **Analytics & Logs → Web Analytics** → add
+  the site → copy the token into `NEXT_PUBLIC_CF_ANALYTICS_TOKEN` and redeploy. It counts visits, pages, countries and
+  devices with no cookies, so no consent banner is needed. Give your client read access in Cloudflare to see it.
 - **Daily glance**: **Moderation → Jobs** (worker alive, no failed jobs) and the Review queue and Support inbox.
 - **Logs**: the host's log viewer. Errors on pages show visitors an "Error reference", which matches a log line.
 

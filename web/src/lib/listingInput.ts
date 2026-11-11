@@ -7,7 +7,7 @@ export const TITLE_STATUSES = ["Clean Title", "Pre-selling", "RFO (Ready for Occ
 export const FINANCING = ["Cash", "Bank Financing", "Pag-IBIG", "In-house Financing"] as const;
 
 const int = (min: number, max: number, label: string) =>
-  z.coerce.number({ invalid_type_error: `${label} must be a number.` }).int(`${label} must be a whole number.`).min(min, `${label} must be at least ${min}.`).max(max, `${label} can't be more than ${max.toLocaleString()}.`);
+  z.coerce.number({ error: `${label} must be a number.` }).int(`${label} must be a whole number.`).min(min, `${label} must be at least ${min}.`).max(max, `${label} can't be more than ${max.toLocaleString()}.`);
 const optInt = (min: number, max: number, label: string) =>
   z.preprocess((v) => (v === "" || v === null || v === undefined ? null : v), int(min, max, label).nullable());
 
@@ -33,7 +33,7 @@ const base = z.object({
   type: z.enum(["condo", "house", "apartment", "townhouse", "lot", "commercial", "office", "warehouse"]),
   title: z.string().trim().min(10, "Make the title at least 10 characters.").max(100, "Keep the title under 100 characters."),
   description: z.string().trim().min(50, "Describe the property in at least 50 characters.").max(5000),
-  price: z.coerce.number({ invalid_type_error: "Enter a price." }).positive("Enter a price.").max(50_000_000_000),
+  price: z.coerce.number({ error: "Enter a price." }).positive("Enter a price.").max(50_000_000_000),
   cityId: z.string().min(1, "Choose a city."),
   areaName: z.string().trim().min(2, "Enter the area, barangay, or building.").max(80),
   address: z.string().trim().max(200).optional().or(z.literal("")),
@@ -45,8 +45,8 @@ const base = z.object({
   furnishing: z.enum(Object.keys(FURNISHING) as [FurnishingKey, ...FurnishingKey[]]),
   amenities: z.array(z.string().max(60)).max(30),
   photoIds: z.array(z.string().min(1)).min(3, "Add at least 3 photos.").max(20, "Add up to 20 photos."),
-  lat: z.number({ required_error: "Place the pin on the map.", invalid_type_error: "Place the pin on the map." }),
-  lng: z.number({ required_error: "Place the pin on the map.", invalid_type_error: "Place the pin on the map." }),
+  lat: z.number({ error: "Place the pin on the map." }),
+  lng: z.number({ error: "Place the pin on the map." }),
   showExactLocation: z.boolean().default(false),
 });
 

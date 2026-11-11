@@ -21,19 +21,22 @@
     "test:ui": "node tests/ui.test.mjs",
     "test": "node tests/api.test.mjs && node tests/ui.test.mjs",
     "maintenance": "node --env-file-if-exists=.env --import tsx scripts/maintenance.ts",
-    "create-admin": "node --env-file-if-exists=.env --import tsx scripts/create-admin.ts"
+    "create-admin": "node --env-file-if-exists=.env --import tsx scripts/create-admin.ts",
+    "loadtest": "node scripts/loadtest.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1164.0",
     "@prisma/client": "^6.9.0",
+    "@sentry/nextjs": "10.77.1",
+    "@sentry/node": "10.77.1",
     "leaflet": "^1.9.4",
-    "next": "15.3.3",
+    "next": "15.5.29",
     "prisma": "^6.9.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "server-only": "^0.0.1",
-    "sharp": "^0.34.5",
-    "zod": "^3.25.67"
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -41,8 +44,9 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "autocannon": "8.0.0",
     "eslint": "^9",
-    "eslint-config-next": "15.3.3",
+    "eslint-config-next": "15.5.29",
     "puppeteer-core": "^23.11.1",
     "tsx": "^4.20.3",
     "typescript": "^5"

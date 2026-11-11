@@ -43,6 +43,8 @@ export function checkEnv(env: NodeJS.ProcessEnv = process.env): EnvReport {
   if ((env.NEARBY_PROVIDER ?? "nominatim") === "nominatim") warnings.push("NEARBY_PROVIDER is \"nominatim\" (free, ~1 request/second, light use only). Use \"geoapify\" with GEOAPIFY_API_KEY for real traffic.");
   if (env.NEARBY_PROVIDER === "geoapify") need("GEOAPIFY_API_KEY", "needed for nearby places");
 
+  if (!env.NEXT_PUBLIC_SENTRY_DSN) warnings.push("NEXT_PUBLIC_SENTRY_DSN is not set: errors won't be reported to Sentry, only written to the logs.");
+  if (!env.NEXT_PUBLIC_CF_ANALYTICS_TOKEN) warnings.push("NEXT_PUBLIC_CF_ANALYTICS_TOKEN is not set: no visitor statistics (unless Cloudflare's automatic setup is on).");
   if (env.DEMO_MODE === "1") warnings.push("DEMO_MODE is \"1\": the footer says the listings are samples. Leave it empty on the live site; use it only on a staging copy.");
   if (!env.SUPPORT_EMAIL) warnings.push("SUPPORT_EMAIL is not set; contact messages are only visible under Moderation → Support.");
   if ((env.GOOGLE_CLIENT_ID && !env.GOOGLE_CLIENT_SECRET) || (!env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)) {

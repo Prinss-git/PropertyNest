@@ -4,6 +4,7 @@ import { Prisma, type Job } from "@prisma/client";
 import { db } from "./db";
 import { sendEmail, sendSms } from "./messaging";
 import { CELL_MAX_AGE_MS, fetchCell } from "./nearby";
+import { reportError } from "./errorReport";
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -119,6 +120,7 @@ export async function runDueJobs(limit = 10, lane: "fast" | "slow" = "fast"): Pr
         },
       });
       console.error(`[job ${job.type} ${job.id}] attempt ${job.attempts} failed${giveUp ? " (giving up)" : ""}:`, e);
+      if (giveUp) reportError(e, { job: job.type, jobId: job.id, attempts: job.attempts });
     }
   }
   return jobs.length;

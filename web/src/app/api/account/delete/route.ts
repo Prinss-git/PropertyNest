@@ -5,7 +5,7 @@ import { handle, readJson } from "@/lib/api";
 import { apiUser } from "@/lib/auth";
 
 const schema = z.object({
-  confirm: z.literal("DELETE", { errorMap: () => ({ message: "Type DELETE to confirm." }) }),
+  confirm: z.literal("DELETE", { error: "Type DELETE to confirm." }),
   password: z.string().max(128).optional(),
 });
 

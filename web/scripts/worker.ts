@@ -5,10 +5,13 @@
  * so an inquiry alert never waits behind a map lookup. It also runs scheduled maintenance (listing expiry,
  * clean-up) every 10 minutes; with several workers only one runs it. Run one per server; more for throughput.
  */
+import * as Sentry from "@sentry/node";
 import { db } from "../src/lib/db";
 import { assertEnv } from "../src/lib/env";
 import { runDueJobs } from "../src/lib/jobs";
 import { runMaintenanceIfDue } from "../src/lib/maintenance";
+import { reportError, setErrorReporter } from "../src/lib/errorReport";
+import { sentryOptions } from "../src/lib/monitoring";
 
 const IDLE_MS = 2000;
 let stopping = false;
@@ -28,6 +31,7 @@ async function lane(name: "fast" | "slow", batch: number) {
       if (n) console.log(`[${name}] processed ${n} job(s)`);
     } catch (e) {
       console.error(`[${name}] loop error:`, e);
+      reportError(e, { where: `worker ${name} lane` });
     }
     if (!n) await new Promise((r) => setTimeout(r, IDLE_MS));
   }
@@ -41,6 +45,7 @@ async function scheduler() {
       if (result) console.log("[maintenance]", JSON.stringify(result));
     } catch (e) {
       console.error("[maintenance] failed:", e);
+      reportError(e, { where: "maintenance" });
     }
     for (let i = 0; i < 30 && !stopping; i++) await new Promise((r) => setTimeout(r, IDLE_MS));
   }
@@ -48,10 +53,14 @@ async function scheduler() {
 
 async function main() {
   assertEnv("The worker");
+  Sentry.init(sentryOptions());
+  Sentry.setTag("process", "worker");
+  setErrorReporter((error, context) => Sentry.captureException(error, { extra: context }));
   console.log(`Worker started (SMS: ${process.env.SMS_PROVIDER ?? "console"}, email: ${process.env.EMAIL_PROVIDER ?? "console"})`);
   // The slow lane takes one job at a time: the places service allows ~1 request per second in total.
   await Promise.all([lane("fast", 20), lane("slow", 1), scheduler()]);
   await db.$disconnect();
+  await Sentry.close(2000); // send any reports still queued before exiting
 }
 
 main();

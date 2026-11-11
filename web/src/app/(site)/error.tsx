@@ -1,10 +1,14 @@
 "use client";
+import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { useEffect } from "react";
 
 // Shown inside the normal header and footer when a page fails unexpectedly.
 export default function SiteError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => console.error(error), [error]);
+  useEffect(() => {
+    console.error(error);
+    Sentry.captureException(error);
+  }, [error]);
   return (
     <main className="container" style={{ paddingBlock: 60 }}>
       <div className="empty">

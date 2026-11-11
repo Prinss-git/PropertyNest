@@ -13,6 +13,7 @@ export default function PrivacyPage() {
       <p>To run your account, show your listings, deliver inquiries between buyers or tenants and agents or owners, prevent fraud, and send service messages.</p>
       <h2>Sharing</h2>
       <p>When you send an inquiry, the agent or owner receives your name and contact details. We use service providers for SMS, email, and hosting. We don&apos;t sell personal data.</p>
+      <p>When something breaks, error details are sent to Sentry so we can fix it; these reports leave out your IP address, cookies, and account details. Visits are counted with Cloudflare Web Analytics, which uses no cookies and doesn&apos;t follow you across other websites.</p>
       <h2>Your rights</h2>
       <p>You can ask to access, correct, or delete your data. Contact our Data Protection Officer at privacy@propertynest.ph.</p>
     </LegalPage>
